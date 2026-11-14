@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pharma Delta | Registro y reportes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#F2F5F3; --surface:#FFFFFF; --sunk:#E8EEEB; --ink:#14211F; --muted:#5A6966; --line:#D3DCD9;
+  --brand:#0F5A50; --brand-ink:#FFFFFF; --pos:#1B7A50; --neg:#BF3F2B; --warn:#9A6408; --warn-bg:#FBF0D6;
+  --c1:#0F5A50; --c2:#6BB5A6; --c3:#3D7FC0; --c4:#D9A02B; --c5:#9AA7A4;
+  --display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+  --body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{ color-scheme:dark;
+    --bg:#0D1615; --surface:#152120; --sunk:#1C2B29; --ink:#E7EFED; --muted:#93A6A2; --line:#293B38;
+    --brand:#56C7AD; --brand-ink:#06201C; --pos:#5FD09A; --neg:#F2826E; --warn:#E8B95A; --warn-bg:#3A2E12;
+    --c1:#56C7AD; --c2:#2F7F70; --c3:#6FA8E0; --c4:#E8B95A; --c5:#6C7D7A;
+  }
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:var(--body);background:var(--bg);color:var(--ink);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+.num{font-variant-numeric:tabular-nums}
+.app{display:grid;grid-template-columns:232px 1fr;min-height:100%}
+.side{background:var(--surface);border-right:1px solid var(--line);padding:22px 14px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:22px}
+.brand{padding:0 8px}
+.brand b{font-family:var(--display);font-size:25px;font-weight:700;letter-spacing:-.02em;display:block;line-height:1}
+.brand span{font-size:13px;color:var(--muted)}
+.cross{display:inline-block;width:14px;height:14px;margin-right:7px;background:
+  linear-gradient(var(--brand),var(--brand)) center/100% 34% no-repeat,
+  linear-gradient(var(--brand),var(--brand)) center/34% 100% no-repeat}
+nav{display:flex;flex-direction:column;gap:2px}
+nav button{background:none;border:0;text-align:left;padding:10px 12px;border-radius:8px;cursor:pointer;color:var(--muted);font-weight:500}
+nav button:hover{background:var(--sunk);color:var(--ink)}
+nav button[aria-current="page"]{background:var(--brand);color:var(--brand-ink)}
+.side .mode{margin-top:auto;font-size:12.5px;color:var(--muted);padding:0 8px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--warn);margin-right:6px}
+.dot.ok{background:var(--pos)}
+main{padding:28px clamp(16px,3vw,40px) 60px;min-width:0}
+.view{display:none} .view.on{display:block}
+.head{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:end;justify-content:space-between;margin-bottom:22px}
+h1{font-family:var(--display);font-size:clamp(26px,3.4vw,38px);font-weight:700;letter-spacing:-.025em;line-height:1.05}
+h2{font-family:var(--display);font-size:19px;font-weight:700;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:14px;max-width:70ch}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+select,input[type=text],input[type=number],input[type=date],input[type=month],input[type=url],input[type=password],textarea{
+  background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 11px;min-height:40px;width:100%}
+.tools select,.tools input{width:auto}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.btn{background:var(--brand);color:var(--brand-ink);border:0;border-radius:8px;padding:10px 16px;font-weight:600;cursor:pointer;min-height:40px}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.small{padding:5px 10px;min-height:30px;font-size:13px}
+.btn.danger{color:var(--neg)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px}
+.panel + .panel{margin-top:16px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px}
+.grid2 .panel + .panel{margin-top:0}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--line);border-radius:12px;background:var(--surface);margin-bottom:16px;overflow:hidden}
+.kpi{padding:16px 18px;border-left:1px solid var(--line)}
+.kpi:first-child{border-left:0}
+.kpi small{color:var(--muted);font-size:13px;display:block}
+.kpi b{font-family:var(--display);font-size:clamp(21px,2.4vw,29px);font-weight:700;letter-spacing:-.02em;display:block;margin:2px 0}
+.kpi i{font-style:normal;font-size:12.5px;color:var(--muted)}
+.pos{color:var(--pos)} .neg{color:var(--neg)}
+.story{font-size:17px;max-width:62ch;margin:6px 0 14px}
+.story b{font-weight:600}
+.chart{position:relative;height:300px}
+.chart.tall{height:340px}
+.cap{font-size:13px;color:var(--muted);margin-top:10px;max-width:75ch}
+.flag{display:inline-block;background:var(--warn-bg);color:var(--warn);border-radius:6px;padding:2px 8px;font-size:12.5px;font-weight:600}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:7px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+thead th{font-weight:600;color:var(--muted);font-size:13px;border-bottom:1.5px solid var(--ink)}
+.sheet td:first-child,.sheet th:first-child{position:sticky;left:0;background:var(--surface);min-width:230px;white-space:normal}
+.sheet tr.sec td{font-family:var(--display);font-weight:700;padding-top:18px;border-bottom:1.5px solid var(--ink)}
+.sheet tr.tot td{font-weight:600;border-top:1.5px solid var(--ink);background:var(--sunk)}
+.sheet tr.tot td:first-child{background:var(--sunk)}
+.sheet tr.big td{font-weight:700;font-size:15px;border-top:3px double var(--ink);background:var(--sunk)}
+.sheet tr.big td:first-child{background:var(--sunk)}
+.sheet tr.pct td{color:var(--muted);font-size:13px}
+.sheet td.totcol,.sheet th.totcol{border-left:1.5px solid var(--ink);font-weight:600}
+.sheet th.est::after{content:" *";color:var(--warn)}
+#t-top td:first-child{white-space:normal}
+#t-top th,#t-top td{padding-left:6px;padding-right:6px}
+.bar{height:6px;background:var(--brand);border-radius:3px;display:block;margin-top:4px;min-width:2px}
+.form{display:grid;gap:14px}
+.form label{display:grid;gap:5px;font-size:13.5px;font-weight:500}
+.form .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form .three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+#c-ventas th,#c-ventas td{padding:6px 5px;font-size:13px}
+.aparte{border-top:1px dashed var(--line);padding-top:14px;display:grid;gap:6px}
+.cuadre{font-weight:600;font-size:14px;min-height:21px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{background:var(--surface);border:0;padding:11px;font-weight:600;cursor:pointer;color:var(--muted)}
+.seg button[aria-pressed="true"][data-t="Ingreso"]{background:var(--pos);color:#fff}
+.seg button[aria-pressed="true"][data-t="Gasto"]{background:var(--neg);color:#fff}
+.hint{font-size:13px;color:var(--muted);font-weight:400}
+.cols{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:16px;align-items:start}
+.cols .panel + .panel{margin-top:0}
+.stack{display:grid;gap:16px}
+.pill{font-size:12px;border-radius:5px;padding:1px 7px;font-weight:600}
+.pill.i{background:color-mix(in srgb,var(--pos) 16%,transparent);color:var(--pos)}
+.pill.g{background:color-mix(in srgb,var(--neg) 14%,transparent);color:var(--neg)}
+.empty{padding:26px;text-align:center;color:var(--muted)}
+#toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:8px;font-weight:500;opacity:0;pointer-events:none;transition:opacity .2s;z-index:20;max-width:90vw}
+#toast.on{opacity:1}
+@media (max-width:900px){
+  .app{grid-template-columns:1fr}
+  .side{position:fixed;bottom:0;top:auto;left:0;right:0;height:auto;flex-direction:row;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));border-right:0;border-top:1px solid var(--line);z-index:10}
+  .brand,.side .mode{display:none}
+  nav{flex-direction:row;width:100%;justify-content:space-between}
+  nav button{flex:1;text-align:center;padding:9px 2px;font-size:11.5px}
+  main{padding:calc(18px + env(safe-area-inset-top,0px)) 14px 96px}
+  .kpis{grid-template-columns:1fr 1fr}
+  .kpi:nth-child(3){border-left:0}
+  .kpi:nth-child(n+3){border-top:1px solid var(--line)}
+  .grid2,.cols{grid-template-columns:minmax(0,1fr)}
+  .sheet td:first-child,.sheet th:first-child{min-width:150px}
+}
+@media print{
+  .side,.tools,#toast{display:none!important}
+  .app{display:block} main{padding:0}
+  body{background:#fff;color:#000;font-size:11px}
+  .panel{border:0;padding:0} .scroll{overflow:visible}
+  th,td{padding:3px 5px}
+  .sheet td:first-child,.sheet th:first-child{position:static;min-width:0}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><b><span class="cross"></span>Pharma Delta</b><span>Registro y reportes del negocio</span></div>
+    <nav id="nav">
+      <button data-v="tablero" aria-current="page">Tablero</button>
+      <button data-v="registrar">Registrar</button>
+      <button data-v="movs">Movimientos</button>
+      <button data-v="er">Resultados</button>
+      <button data-v="flujo">Flujo</button>
+      <button data-v="datos">Datos</button>
+    </nav>
+    <div class="mode" id="mode"></div>
+  </aside>
+
+  <main>
+    <!-- TABLERO -->
+    <section class="view on" id="v-tablero">
+      <div class="head">
+        <div><h1>De dónde entra y a dónde se va</h1><p class="sub" id="t-sub"></p></div>
+        <div class="tools"><label for="t-mes" class="hint">Mes</label><select id="t-mes"></select></div>
+      </div>
+      <div class="kpis" id="t-kpis"></div>
+      <div class="panel">
+        <p class="story" id="t-story"></p>
+        <div class="chart tall"><canvas id="ch-wf"></canvas></div>
+      </div>
+      <div class="grid2">
+        <div class="panel"><h2>Ingresos y utilidad por mes</h2><div class="chart"><canvas id="ch-trend"></canvas></div>
+          <p class="cap">Barras: ingresos por línea. Línea: utilidad neta. Mayo y agosto traen venta atípica por los peregrinos.</p></div>
+        <div class="panel"><h2>Venta de producto contra punto de equilibrio</h2><div class="chart"><canvas id="ch-pe"></canvas></div>
+          <p class="cap">El equilibrio es la venta de producto que cubre nómina, renta y fijos, ya descontado lo que aportan agua, recargas y máquinas.</p></div>
+        <div class="panel"><h2>Caja: flujo del mes y saldo</h2><div class="chart"><canvas id="ch-caja"></canvas></div>
+          <p class="cap" id="t-cajacap"></p></div>
+        <div class="panel"><h2>Gastos de operación por mes</h2><div class="chart"><canvas id="ch-gas"></canvas></div>
+          <p class="cap">Sueldos y renta explican casi todo el gasto fijo.</p></div>
+      </div>
+      <div class="grid2">
+        <div class="panel"><h2>Venta y utilidad por departamento</h2><p class="hint">Punto de venta, nov 2025 a oct 2026</p><div class="chart tall"><canvas id="ch-dep"></canvas></div></div>
+        <div class="panel"><h2>Productos que más utilidad dejan</h2><p class="hint">Por tipo de producto (grupo de compra), nov 2025 a oct 2026</p><div class="scroll"><table id="t-top"></table></div></div>
+      </div>
+      <div class="panel"><h2>Inventario por departamento</h2><p class="hint">Último inventario cargado del punto de venta, solo productos con existencia</p><div class="scroll"><table id="t-inv"></table></div></div>
+    </section>
+
+    <!-- REGISTRAR -->
+    <section class="view" id="v-registrar">
+      <div class="head"><div><h1>Registrar</h1><p class="sub">Cada ingreso o gasto es un movimiento. Los reportes se arman solos con lo que guardes aquí.</p></div></div>
+      <div class="cols">
+        <div class="stack">
+          <div class="panel">
+            <h2>Venta del día</h2>
+            <p class="hint" style="margin:4px 0 14px">El total del corte trae producto y recargas juntos. Repártelo de las dos formas: por lo que se vendió y por cómo se cobró. Solo se guarda cuando las dos sumas dan el total.</p>
+            <div class="form">
+              <div class="two">
+                <label>Fecha<input type="date" id="v-fecha"></label>
+                <label>Venta total del día ($)<input type="number" id="v-total" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></label>
+              </div>
+              <div class="two">
+                <label>Venta de producto<input type="number" id="v-prod" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></label>
+                <label>Venta de recargas<input type="number" id="v-rec" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></label>
+              </div>
+              <p class="cuadre" id="v-estado1" role="status"></p>
+              <div class="three">
+                <label>Efectivo<input type="number" id="v-ef" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></label>
+                <label>Transferencia<input type="number" id="v-tr" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></label>
+                <label>Tarjeta<input type="number" id="v-ta" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></label>
+              </div>
+              <p class="cuadre" id="v-estado2" role="status"></p>
+              <div class="aparte">
+                <div class="two">
+                  <label>Agua, por aparte ($)<input type="number" id="v-agua" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></label>
+                  <label>Cómo se cobró el agua<select id="v-aguapago"><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option></select></label>
+                </div>
+                <span class="hint">No entra en el total del corte. Déjalo vacío si ese día no hubo.</span>
+              </div>
+              <div><button class="btn" id="v-save" disabled>Guardar venta del día</button></div>
+            </div>
+          </div>
+          <div class="panel">
+            <h2 id="f-title" style="margin-bottom:14px">Otro ingreso o gasto</h2>
+            <div class="form" id="form">
+              <div class="seg" role="group" aria-label="Tipo de movimiento">
+                <button type="button" data-t="Ingreso" aria-pressed="false">Ingreso</button>
+                <button type="button" data-t="Gasto" aria-pressed="true">Gasto</button>
+              </div>
+              <div class="two">
+                <label>Fecha<input type="date" id="f-fecha"></label>
+                <label>Monto ($)<input type="number" id="f-monto" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></label>
+              </div>
+              <label>Categoría<select id="f-cat"></select><span class="hint" id="f-hint"></span></label>
+              <label>Mes al que corresponde<input type="month" id="f-per"><span class="hint">Normalmente el mismo de la fecha. Cámbialo si pagas por adelantado o atrasado: la renta de diciembre pagada el 30 de noviembre corresponde a diciembre. El flujo usa la fecha; el estado de resultados usa este mes.</span></label>
+              <label>Concepto<input type="text" id="f-concepto" placeholder="Ej. Pedido a proveedor, pago de luz"></label>
+              <div class="two">
+                <label>Forma de pago<select id="f-pago"><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option><option>No aplica</option></select></label>
+                <label>Notas (opcional)<input type="text" id="f-notas"></label>
+              </div>
+              <div class="tools"><button class="btn" id="f-save">Guardar movimiento</button><button class="btn ghost" id="f-cancel" hidden>Cancelar edición</button></div>
+            </div>
+          </div>
+          <div class="panel">
+            <h2>Cierre mensual</h2>
+            <p class="hint" style="margin:4px 0 14px">La venta sale de lo que ya registraste por día. Aquí solo falta el costo del producto vendido, que viene en el reporte del punto de venta. El costo de las recargas se calcula solo.</p>
+            <div class="form">
+              <label>Mes<input type="month" id="c-mes"></label>
+              <div class="scroll"><table id="c-ventas"></table></div>
+              <label>Costo de producto vendido<input type="number" id="c-cp" min="0" step="0.01" inputmode="decimal"></label>
+              <p class="hint" id="c-margen"></p>
+              <div><button class="btn" id="c-save">Guardar costo del mes</button></div>
+            </div>
+          </div>
+        </div>
+        <div class="stack">
+          <div class="panel"><h2 id="p-title">Ventas del mes por forma de pago</h2><div class="scroll"><table id="p-table"></table></div></div>
+          <div class="panel"><h2>Últimos movimientos</h2><div class="scroll"><table id="r-last"></table></div></div>
+        </div>
+      </div>
+    </section>
+    <!-- MOVIMIENTOS -->
+    <section class="view" id="v-movs">
+      <div class="head"><div><h1>Movimientos</h1><p class="sub" id="m-sub"></p></div>
+        <div class="tools">
+          <select id="m-mes" aria-label="Mes"></select>
+          <select id="m-tipo" aria-label="Tipo"><option value="">Ingresos y gastos</option><option>Ingreso</option><option>Gasto</option></select>
+          <select id="m-cat" aria-label="Categoría"></select>
+          <input type="text" id="m-q" placeholder="Buscar concepto" aria-label="Buscar">
+        </div></div>
+      <div class="panel"><div class="scroll"><table id="m-table"></table></div></div>
+    </section>
+
+    <!-- ESTADO DE RESULTADOS -->
+    <section class="view" id="v-er">
+      <div class="head"><div><h1>Estado de resultados</h1><p class="sub">Venta menos costo de lo vendido menos gastos de operación. Cada gasto cuenta en el mes al que corresponde, aunque se haya pagado en otro.</p></div>
+        <div class="tools"><select class="rango" data-for="er" aria-label="Periodo"></select><button class="btn ghost" onclick="window.print()">Imprimir</button></div></div>
+      <div class="panel"><div class="scroll"><table class="sheet" id="er-table"></table></div></div>
+    </section>
+
+    <!-- FLUJO -->
+    <section class="view" id="v-flujo">
+      <div class="head"><div><h1>Flujo de efectivo mensual</h1><p class="sub">El dinero que de verdad entró y salió de la caja, en la fecha en que se pagó: aquí cuentan las compras, los retiros, las aportaciones y lo pagado por adelantado.</p></div>
+        <div class="tools"><select class="rango" data-for="flujo" aria-label="Periodo"></select><button class="btn ghost" onclick="window.print()">Imprimir</button></div></div>
+      <div class="panel"><div class="scroll"><table class="sheet" id="fl-table"></table></div>
+        <p class="cap" id="fl-cap"></p></div>
+    </section>
+
+    <!-- DATOS -->
+    <section class="view" id="v-datos">
+      <div class="head"><div><h1>Datos</h1><p class="sub">Dónde se guarda la información y cómo moverla entre la app y el Excel.</p></div></div>
+      <div class="grid2" style="margin-top:0">
+        <div class="panel"><h2>Saldo de caja de arranque</h2>
+          <p class="hint" style="margin:4px 0 12px">Dinero que había en caja al iniciar ese mes. El saldo del flujo se lleva desde ahí; los meses anteriores muestran movimientos pero no saldo.</p>
+          <div class="tools"><input type="month" id="d-saldo-mes" aria-label="Mes de arranque"><input type="number" id="d-saldo" step="0.01" style="max-width:150px" aria-label="Saldo"><button class="btn" id="d-saldo-save">Guardar saldo</button></div></div>
+        <div class="panel"><h2>Costo de las recargas</h2>
+          <p class="hint" style="margin:4px 0 12px">Porcentaje de lo cobrado que es costo. Con 92, de una recarga cobrada en $105 quedan $8.40. Se aplica solo a cada venta de recargas que captures, como costo en resultados y como saldo comprado en el flujo; si lo cambias, se recalculan las capturadas (el histórico no se toca).</p>
+          <div class="tools"><input type="number" id="d-pct" min="1" max="100" step="0.1" style="max-width:110px"><span class="hint">% de la venta</span><button class="btn" id="d-pct-save">Guardar porcentaje</button></div></div>
+        <div class="panel"><h2>Comisión por tarjeta</h2>
+          <p class="hint" style="margin:4px 0 12px">Porcentaje que cobra la terminal. Con 4, de una venta de $100 con tarjeta se registran $4 de comisión, como gasto en resultados y como salida en el flujo. Se aplica solo a cada venta con tarjeta que captures; si lo cambias, se recalculan las capturadas.</p>
+          <div class="tools"><input type="number" id="d-ptar" min="0" max="99" step="0.1" style="max-width:110px"><span class="hint">% de lo cobrado con tarjeta</span><button class="btn" id="d-ptar-save">Guardar porcentaje</button></div></div>
+        <div class="panel"><h2>Excel</h2>
+          <p class="hint" style="margin:4px 0 12px">Exporta todo (movimientos y los dos reportes) o carga la hoja Movimientos de Farmacia_Base.xlsx. Al importar se reemplazan los movimientos de este dispositivo.</p>
+          <div class="tools"><button class="btn" id="d-export">Exportar a Excel</button><label class="btn ghost" style="display:inline-flex;align-items:center">Importar Excel<input type="file" id="d-import" accept=".xlsx,.xls" hidden></label></div></div>
+        <div class="panel"><h2>Conexión con Google Sheets</h2>
+          <p class="hint" style="margin:4px 0 12px">Con la conexión, lo que captures en cualquier celular o computadora cae en la misma hoja. Sin ella, cada dispositivo guarda lo suyo. La dirección y la clave se guardan solo en este dispositivo.</p>
+          <div class="form">
+            <label>Dirección del Apps Script<input type="url" id="d-url" placeholder="https://script.google.com/macros/s/…/exec"></label>
+            <label>Clave<input type="password" id="d-clave" autocomplete="off"></label>
+            <div class="tools"><button class="btn" id="d-conn">Conectar</button><button class="btn ghost" id="d-disc">Desconectar</button></div>
+          </div></div>
+        <div class="panel"><h2>Histórico de arranque</h2>
+          <p class="hint" style="margin:4px 0 12px">La app trae cargado marzo 2025 a noviembre 2026. Restablecer borra lo capturado en este dispositivo y vuelve a ese punto.</p>
+          <button class="btn ghost danger" id="d-reset">Restablecer histórico</button></div>
+      </div>
+    </section>
+  </main>
+</div>
+<div id="toast" role="status"></div>
+
+<script>
+const CATS=[["Venta de producto", "Ingreso", "Ingresos", "Operación", "Venta de mostrador de la farmacia (sin recargas)"], ["Venta de recargas", "Ingreso", "Ingresos", "Operación", "Recargas de tiempo aire"], ["Ingreso agua", "Ingreso", "Ingresos", "Operación", "Venta de agua"], ["Ingreso máquinas", "Ingreso", "Ingresos", "Operación", "Máquinas de peluches / pinball (histórico)"], ["Otros ingresos", "Ingreso", "Ingresos", "Operación", "Consultorio, inyecciones u otro ingreso del negocio"], ["Aportación del dueño", "Ingreso", "—", "Financiamiento", "Dinero que metes al negocio. No es venta"], ["Préstamo recibido", "Ingreso", "—", "Financiamiento", "Préstamos que entran a la caja"], ["Devoluciones recibidas", "Ingreso", "—", "Operación", "Dinero que regresa a la caja (reembolsos). No es venta"], ["Costo de producto vendido", "Gasto", "Costo de ventas", "—", "Costo de lo vendido (reporte del punto de venta). No sale de caja"], ["Costo de recargas", "Gasto", "Costo de ventas", "—", "Costo de las recargas vendidas. No sale de caja"], ["Pipa y gastos de agua", "Gasto", "Costo de ventas", "Operación", "Pipas, mantenimiento y gastos del agua"], ["Sueldos", "Gasto", "Gastos de operación", "Operación", "Pago por día trabajado"], ["Comisiones y bonos", "Gasto", "Gastos de operación", "Operación", "Comisiones y bono por meta"], ["Renta", "Gasto", "Gastos de operación", "Operación", "Renta del local"], ["Internet", "Gasto", "Gastos de operación", "Operación", "Internet"], ["Luz y servicios", "Gasto", "Gastos de operación", "Operación", "Luz, agua del local, teléfono"], ["Gastos administrativos", "Gasto", "Gastos de operación", "Operación", "Papelería, punto de venta, permisos"], ["Mantenimiento y reparaciones", "Gasto", "Gastos de operación", "Operación", "Arreglos del local y equipo"], ["Otros gastos", "Gasto", "Gastos de operación", "Operación", "Extraordinarios"], ["Comisión por tarjeta", "Gasto", "Gastos de operación", "Operación", "4% que cobra la terminal sobre lo vendido con tarjeta. La app lo calcula sola"], ["Faltante de caja", "Gasto", "Gastos de operación", "Operación", "Diferencia entre la venta del punto de venta y el dinero del libro de caja"], ["Compra de mercancía", "Gasto", "—", "Operación", "Surtido de producto (incluye pagos a Ale, mamá y papá). Sale de caja; al resultado entra como costo cuando se vende"], ["Compra de saldo para recargas", "Gasto", "—", "Operación", "Saldo comprado para vender recargas"], ["Devoluciones pagadas", "Gasto", "—", "Operación", "Dinero devuelto desde la caja"], ["Compra de equipo", "Gasto", "—", "Inversión", "Mobiliario, refrigerador, equipo"], ["Retiro del dueño", "Gasto", "—", "Financiamiento", "Dinero que sacas del negocio"], ["Pago de préstamo", "Gasto", "—", "Financiamiento", "Abonos a préstamos"]];
+const SEED={"movs":[{"fecha":"2025-03-31","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del mes según punto de venta","monto":6507.76,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0001"},{"fecha":"2025-03-31","tipo":"Ingreso","cat":"Venta de recargas","concepto":"Recargas del mes según punto de venta","monto":980.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0002"},{"fecha":"2025-03-31","tipo":"Gasto","cat":"Costo de producto vendido","concepto":"Costo de lo vendido según punto de venta","monto":3356.92,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0003"},{"fecha":"2025-03-31","tipo":"Gasto","cat":"Costo de recargas","concepto":"Costo de las recargas vendidas","monto":789.6,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0004"},{"fecha":"2025-03-31","tipo":"Gasto","cat":"Renta","concepto":"Renta del local","monto":2500.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0005"},{"fecha":"2025-03-31","tipo":"Gasto","cat":"Gastos administrativos","concepto":"Gastos administrativos","monto":182.9,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0006"},{"fecha":"2025-03-31","tipo":"Gasto","cat":"Compra de mercancía","concepto":"Compras estimadas = costo de lo vendido","monto":3356.92,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real de compras; sustituir por el total real","id":"H-0007"},{"fecha":"2025-03-31","tipo":"Gasto","cat":"Compra de saldo para recargas","concepto":"Saldo estimado = costo de recargas","monto":789.6,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real; sustituir por el saldo comprado","id":"H-0008"},{"fecha":"2025-03-31","tipo":"Gasto","cat":"Renta","concepto":"Renta de abril, pagada por adelantado","monto":5000.0,"pago":"Efectivo","origen":"Histórico","notas":"Fecha de pago supuesta: último día del mes anterior","id":"H-0015","per":"2025-04"},{"fecha":"2025-04-30","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del mes según punto de venta","monto":15475.26,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0009"},{"fecha":"2025-04-30","tipo":"Ingreso","cat":"Venta de recargas","concepto":"Recargas del mes según punto de venta","monto":1790.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0010"},{"fecha":"2025-04-30","tipo":"Gasto","cat":"Costo de producto vendido","concepto":"Costo de lo vendido según punto de venta","monto":7899.63,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0011"},{"fecha":"2025-04-30","tipo":"Gasto","cat":"Costo de recargas","concepto":"Costo de las recargas vendidas","monto":1718.4,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0012"},{"fecha":"2025-04-30","tipo":"Gasto","cat":"Sueldos","concepto":"Nómina del mes","monto":5779.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0013"},{"fecha":"2025-04-30","tipo":"Gasto","cat":"Comisiones y bonos","concepto":"Comisiones y bonos pagados","monto":343.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0014"},{"fecha":"2025-04-30","tipo":"Gasto","cat":"Internet","concepto":"Internet","monto":349.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0016"},{"fecha":"2025-04-30","tipo":"Gasto","cat":"Gastos administrativos","concepto":"Gastos administrativos","monto":410.9,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0017"},{"fecha":"2025-04-30","tipo":"Gasto","cat":"Compra de mercancía","concepto":"Compras estimadas = costo de lo vendido","monto":7899.63,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real de compras; sustituir por el total real","id":"H-0018"},{"fecha":"2025-04-30","tipo":"Gasto","cat":"Compra de saldo para recargas","concepto":"Saldo estimado = costo de recargas","monto":1718.4,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real; sustituir por el saldo comprado","id":"H-0019"},{"fecha":"2025-04-30","tipo":"Gasto","cat":"Renta","concepto":"Renta de mayo, pagada por adelantado","monto":5000.0,"pago":"Efectivo","origen":"Histórico","notas":"Fecha de pago supuesta: último día del mes anterior","id":"H-0027","per":"2025-05"},{"fecha":"2025-05-31","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del mes según punto de venta","monto":13335.73,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0020"},{"fecha":"2025-05-31","tipo":"Ingreso","cat":"Venta de recargas","concepto":"Recargas del mes según punto de venta","monto":2170.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0021"},{"fecha":"2025-05-31","tipo":"Ingreso","cat":"Ingreso máquinas","concepto":"Máquinas (peluches y pinball)","monto":500.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0022"},{"fecha":"2025-05-31","tipo":"Gasto","cat":"Costo de producto vendido","concepto":"Costo de lo vendido según punto de venta","monto":6741.08,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0023"},{"fecha":"2025-05-31","tipo":"Gasto","cat":"Costo de recargas","concepto":"Costo de las recargas vendidas","monto":2073.6,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0024"},{"fecha":"2025-05-31","tipo":"Gasto","cat":"Sueldos","concepto":"Nómina del mes","monto":6300.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0025"},{"fecha":"2025-05-31","tipo":"Gasto","cat":"Comisiones y bonos","concepto":"Comisiones y bonos pagados","monto":429.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0026"},{"fecha":"2025-05-31","tipo":"Gasto","cat":"Internet","concepto":"Internet","monto":349.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0028"},{"fecha":"2025-05-31","tipo":"Gasto","cat":"Gastos administrativos","concepto":"Gastos administrativos","monto":182.9,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0029"},{"fecha":"2025-05-31","tipo":"Gasto","cat":"Compra de mercancía","concepto":"Compras estimadas = costo de lo vendido","monto":6741.08,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real de compras; sustituir por el total real","id":"H-0030"},{"fecha":"2025-05-31","tipo":"Gasto","cat":"Compra de saldo para recargas","concepto":"Saldo estimado = costo de recargas","monto":2073.6,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real; sustituir por el saldo comprado","id":"H-0031"},{"fecha":"2025-05-31","tipo":"Gasto","cat":"Renta","concepto":"Renta de junio, pagada por adelantado","monto":5000.0,"pago":"Efectivo","origen":"Histórico","notas":"Fecha de pago supuesta: último día del mes anterior","id":"H-0039","per":"2025-06"},{"fecha":"2025-06-30","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del mes según punto de venta","monto":18109.53,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0032"},{"fecha":"2025-06-30","tipo":"Ingreso","cat":"Venta de recargas","concepto":"Recargas del mes según punto de venta","monto":3022.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0033"},{"fecha":"2025-06-30","tipo":"Ingreso","cat":"Ingreso máquinas","concepto":"Máquinas (peluches y pinball)","monto":500.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0034"},{"fecha":"2025-06-30","tipo":"Gasto","cat":"Costo de producto vendido","concepto":"Costo de lo vendido según punto de venta","monto":9246.44,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0035"},{"fecha":"2025-06-30","tipo":"Gasto","cat":"Costo de recargas","concepto":"Costo de las recargas vendidas","monto":2892.4,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0036"},{"fecha":"2025-06-30","tipo":"Gasto","cat":"Sueldos","concepto":"Nómina del mes","monto":6066.67,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0037"},{"fecha":"2025-06-30","tipo":"Gasto","cat":"Comisiones y bonos","concepto":"Comisiones y bonos pagados","monto":504.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0038"},{"fecha":"2025-06-30","tipo":"Gasto","cat":"Internet","concepto":"Internet","monto":349.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0040"},{"fecha":"2025-06-30","tipo":"Gasto","cat":"Gastos administrativos","concepto":"Gastos administrativos","monto":182.9,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0041"},{"fecha":"2025-06-30","tipo":"Gasto","cat":"Compra de mercancía","concepto":"Compras estimadas = costo de lo vendido","monto":9246.44,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real de compras; sustituir por el total real","id":"H-0042"},{"fecha":"2025-06-30","tipo":"Gasto","cat":"Compra de saldo para recargas","concepto":"Saldo estimado = costo de recargas","monto":2892.4,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real; sustituir por el saldo comprado","id":"H-0043"},{"fecha":"2025-06-30","tipo":"Gasto","cat":"Renta","concepto":"Renta de julio, pagada por adelantado","monto":5000.0,"pago":"Efectivo","origen":"Histórico","notas":"Fecha de pago supuesta: último día del mes anterior","id":"H-0051","per":"2025-07"},{"fecha":"2025-07-31","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del mes según punto de venta","monto":16373.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0044"},{"fecha":"2025-07-31","tipo":"Ingreso","cat":"Venta de recargas","concepto":"Recargas del mes según punto de venta","monto":2023.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0045"},{"fecha":"2025-07-31","tipo":"Ingreso","cat":"Ingreso máquinas","concepto":"Máquinas (peluches y pinball)","monto":500.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0046"},{"fecha":"2025-07-31","tipo":"Gasto","cat":"Costo de producto vendido","concepto":"Costo de lo vendido según punto de venta","monto":8777.62,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0047"},{"fecha":"2025-07-31","tipo":"Gasto","cat":"Costo de recargas","concepto":"Costo de las recargas vendidas","monto":1890.0,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0048"},{"fecha":"2025-07-31","tipo":"Gasto","cat":"Sueldos","concepto":"Nómina del mes","monto":6533.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0049"},{"fecha":"2025-07-31","tipo":"Gasto","cat":"Comisiones y bonos","concepto":"Comisiones y bonos pagados","monto":528.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0050"},{"fecha":"2025-07-31","tipo":"Gasto","cat":"Internet","concepto":"Internet","monto":389.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0052"},{"fecha":"2025-07-31","tipo":"Gasto","cat":"Gastos administrativos","concepto":"Gastos administrativos","monto":182.9,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0053"},{"fecha":"2025-07-31","tipo":"Gasto","cat":"Compra de mercancía","concepto":"Compras estimadas = costo de lo vendido","monto":8777.62,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real de compras; sustituir por el total real","id":"H-0054"},{"fecha":"2025-07-31","tipo":"Gasto","cat":"Compra de saldo para recargas","concepto":"Saldo estimado = costo de recargas","monto":1890.0,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real; sustituir por el saldo comprado","id":"H-0055"},{"fecha":"2025-07-31","tipo":"Gasto","cat":"Renta","concepto":"Renta de agosto, pagada por adelantado","monto":5000.0,"pago":"Efectivo","origen":"Histórico","notas":"Fecha de pago supuesta: último día del mes anterior","id":"H-0063","per":"2025-08"},{"fecha":"2025-08-31","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del mes según punto de venta","monto":23850.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0056"},{"fecha":"2025-08-31","tipo":"Ingreso","cat":"Venta de recargas","concepto":"Recargas del mes según punto de venta","monto":3228.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0057"},{"fecha":"2025-08-31","tipo":"Ingreso","cat":"Ingreso máquinas","concepto":"Máquinas (peluches y pinball)","monto":500.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0058"},{"fecha":"2025-08-31","tipo":"Gasto","cat":"Costo de producto vendido","concepto":"Costo de lo vendido según punto de venta","monto":12919.6,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0059"},{"fecha":"2025-08-31","tipo":"Gasto","cat":"Costo de recargas","concepto":"Costo de las recargas vendidas","monto":3040.0,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0060"},{"fecha":"2025-08-31","tipo":"Gasto","cat":"Sueldos","concepto":"Nómina del mes","monto":6533.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0061"},{"fecha":"2025-08-31","tipo":"Gasto","cat":"Comisiones y bonos","concepto":"Comisiones y bonos pagados","monto":539.84,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0062"},{"fecha":"2025-08-31","tipo":"Gasto","cat":"Internet","concepto":"Internet","monto":389.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0064"},{"fecha":"2025-08-31","tipo":"Gasto","cat":"Gastos administrativos","concepto":"Gastos administrativos","monto":682.9,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0065"},{"fecha":"2025-08-31","tipo":"Gasto","cat":"Compra de mercancía","concepto":"Compras estimadas = costo de lo vendido","monto":12919.6,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real de compras; sustituir por el total real","id":"H-0066"},{"fecha":"2025-08-31","tipo":"Gasto","cat":"Compra de saldo para recargas","concepto":"Saldo estimado = costo de recargas","monto":3040.0,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real; sustituir por el saldo comprado","id":"H-0067"},{"fecha":"2025-08-31","tipo":"Gasto","cat":"Renta","concepto":"Renta de septiembre, pagada por adelantado","monto":6750.0,"pago":"Efectivo","origen":"Histórico","notas":"Fecha de pago supuesta: último día del mes anterior","id":"H-0076","per":"2025-09"},{"fecha":"2025-09-30","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del mes según punto de venta","monto":20840.76,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0068"},{"fecha":"2025-09-30","tipo":"Ingreso","cat":"Venta de recargas","concepto":"Recargas del mes según punto de venta","monto":2846.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0069"},{"fecha":"2025-09-30","tipo":"Ingreso","cat":"Ingreso agua","concepto":"Venta de agua del mes","monto":1100.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0070"},{"fecha":"2025-09-30","tipo":"Ingreso","cat":"Ingreso máquinas","concepto":"Máquinas (peluches y pinball)","monto":500.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0071"},{"fecha":"2025-09-30","tipo":"Gasto","cat":"Costo de producto vendido","concepto":"Costo de lo vendido según punto de venta","monto":11370.39,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0072"},{"fecha":"2025-09-30","tipo":"Gasto","cat":"Costo de recargas","concepto":"Costo de las recargas vendidas","monto":2670.0,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0073"},{"fecha":"2025-09-30","tipo":"Gasto","cat":"Sueldos","concepto":"Nómina del mes","monto":6299.33,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0074"},{"fecha":"2025-09-30","tipo":"Gasto","cat":"Comisiones y bonos","concepto":"Comisiones y bonos pagados","monto":204.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0075"},{"fecha":"2025-09-30","tipo":"Gasto","cat":"Internet","concepto":"Internet","monto":349.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0077"},{"fecha":"2025-09-30","tipo":"Gasto","cat":"Gastos administrativos","concepto":"Gastos administrativos","monto":182.9,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0078"},{"fecha":"2025-09-30","tipo":"Gasto","cat":"Compra de mercancía","concepto":"Compras estimadas = costo de lo vendido","monto":11370.39,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real de compras; sustituir por el total real","id":"H-0079"},{"fecha":"2025-09-30","tipo":"Gasto","cat":"Compra de saldo para recargas","concepto":"Saldo estimado = costo de recargas","monto":2670.0,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real; sustituir por el saldo comprado","id":"H-0080"},{"fecha":"2025-09-30","tipo":"Gasto","cat":"Renta","concepto":"Renta de octubre, pagada por adelantado","monto":8500.0,"pago":"Efectivo","origen":"Histórico","notas":"Fecha de pago supuesta: último día del mes anterior","id":"H-0090","per":"2025-10"},{"fecha":"2025-10-31","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del mes según punto de venta","monto":26969.22,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0081"},{"fecha":"2025-10-31","tipo":"Ingreso","cat":"Venta de recargas","concepto":"Recargas del mes según punto de venta","monto":4107.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0082"},{"fecha":"2025-10-31","tipo":"Ingreso","cat":"Ingreso agua","concepto":"Venta de agua del mes","monto":2500.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0083"},{"fecha":"2025-10-31","tipo":"Ingreso","cat":"Ingreso máquinas","concepto":"Máquinas (peluches y pinball)","monto":965.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0084"},{"fecha":"2025-10-31","tipo":"Gasto","cat":"Costo de producto vendido","concepto":"Costo de lo vendido según punto de venta","monto":14490.81,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0085"},{"fecha":"2025-10-31","tipo":"Gasto","cat":"Costo de recargas","concepto":"Costo de las recargas vendidas","monto":3860.0,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0086"},{"fecha":"2025-10-31","tipo":"Gasto","cat":"Pipa y gastos de agua","concepto":"Pipa / mantenimiento de agua","monto":500.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0087"},{"fecha":"2025-10-31","tipo":"Gasto","cat":"Sueldos","concepto":"Nómina del mes","monto":7232.67,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0088"},{"fecha":"2025-10-31","tipo":"Gasto","cat":"Comisiones y bonos","concepto":"Comisiones y bonos pagados","monto":990.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0089"},{"fecha":"2025-10-31","tipo":"Gasto","cat":"Internet","concepto":"Internet","monto":349.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0091"},{"fecha":"2025-10-31","tipo":"Gasto","cat":"Gastos administrativos","concepto":"Gastos administrativos","monto":496.48,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0092"},{"fecha":"2025-10-31","tipo":"Gasto","cat":"Compra de mercancía","concepto":"Compras estimadas = costo de lo vendido","monto":14490.81,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real de compras; sustituir por el total real","id":"H-0093"},{"fecha":"2025-10-31","tipo":"Gasto","cat":"Compra de saldo para recargas","concepto":"Saldo estimado = costo de recargas","monto":3860.0,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real; sustituir por el saldo comprado","id":"H-0094"},{"fecha":"2025-10-31","tipo":"Gasto","cat":"Renta","concepto":"Renta de noviembre, pagada por adelantado","monto":8500.0,"pago":"Efectivo","origen":"Histórico","notas":"Fecha de pago supuesta: último día del mes anterior","id":"H-0104","per":"2025-11"},{"fecha":"2025-11-30","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del mes según punto de venta","monto":25641.98,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0095"},{"fecha":"2025-11-30","tipo":"Ingreso","cat":"Venta de recargas","concepto":"Recargas del mes según punto de venta","monto":4276.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0096"},{"fecha":"2025-11-30","tipo":"Ingreso","cat":"Ingreso agua","concepto":"Venta de agua del mes","monto":4386.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0097"},{"fecha":"2025-11-30","tipo":"Ingreso","cat":"Ingreso máquinas","concepto":"Máquinas (peluches y pinball)","monto":360.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0098"},{"fecha":"2025-11-30","tipo":"Gasto","cat":"Costo de producto vendido","concepto":"Costo de lo vendido según punto de venta","monto":13390.34,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0099"},{"fecha":"2025-11-30","tipo":"Gasto","cat":"Costo de recargas","concepto":"Costo de las recargas vendidas","monto":4030.0,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0100"},{"fecha":"2025-11-30","tipo":"Gasto","cat":"Pipa y gastos de agua","concepto":"Pipa / mantenimiento de agua","monto":1000.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0101"},{"fecha":"2025-11-30","tipo":"Gasto","cat":"Sueldos","concepto":"Nómina del mes","monto":6715.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0102"},{"fecha":"2025-11-30","tipo":"Gasto","cat":"Comisiones y bonos","concepto":"Comisiones y bonos pagados","monto":273.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0103"},{"fecha":"2025-11-30","tipo":"Gasto","cat":"Internet","concepto":"Internet","monto":349.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0105"},{"fecha":"2025-11-30","tipo":"Gasto","cat":"Gastos administrativos","concepto":"Gastos administrativos","monto":444.9,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0106"},{"fecha":"2025-11-30","tipo":"Gasto","cat":"Compra de mercancía","concepto":"Compras estimadas = costo de lo vendido","monto":13390.34,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real de compras; sustituir por el total real","id":"H-0107"},{"fecha":"2025-11-30","tipo":"Gasto","cat":"Compra de saldo para recargas","concepto":"Saldo estimado = costo de recargas","monto":4030.0,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real; sustituir por el saldo comprado","id":"H-0108"},{"fecha":"2025-11-30","tipo":"Gasto","cat":"Renta","concepto":"Renta de diciembre, pagada por adelantado","monto":8500.0,"pago":"Efectivo","origen":"Histórico","notas":"Fecha de pago supuesta: último día del mes anterior","id":"H-0117","per":"2025-12"},{"fecha":"2025-12-31","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del mes según punto de venta","monto":21920.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0109"},{"fecha":"2025-12-31","tipo":"Ingreso","cat":"Venta de recargas","concepto":"Recargas del mes según punto de venta","monto":3769.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0110"},{"fecha":"2025-12-31","tipo":"Ingreso","cat":"Ingreso agua","concepto":"Venta de agua del mes","monto":3478.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0111"},{"fecha":"2025-12-31","tipo":"Ingreso","cat":"Ingreso máquinas","concepto":"Máquinas (peluches y pinball)","monto":1360.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0112"},{"fecha":"2025-12-31","tipo":"Gasto","cat":"Costo de producto vendido","concepto":"Costo de lo vendido según punto de venta","monto":10788.15,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0113"},{"fecha":"2025-12-31","tipo":"Gasto","cat":"Costo de recargas","concepto":"Costo de las recargas vendidas","monto":3550.0,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0114"},{"fecha":"2025-12-31","tipo":"Gasto","cat":"Sueldos","concepto":"Nómina del mes","monto":7849.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0115"},{"fecha":"2025-12-31","tipo":"Gasto","cat":"Comisiones y bonos","concepto":"Comisiones y bonos pagados","monto":600.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0116"},{"fecha":"2025-12-31","tipo":"Gasto","cat":"Internet","concepto":"Internet","monto":349.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0118"},{"fecha":"2025-12-31","tipo":"Gasto","cat":"Gastos administrativos","concepto":"Gastos administrativos","monto":182.9,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0119"},{"fecha":"2025-12-31","tipo":"Gasto","cat":"Compra de mercancía","concepto":"Compras estimadas = costo de lo vendido","monto":10788.15,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real de compras; sustituir por el total real","id":"H-0120"},{"fecha":"2025-12-31","tipo":"Gasto","cat":"Compra de saldo para recargas","concepto":"Saldo estimado = costo de recargas","monto":3550.0,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real; sustituir por el saldo comprado","id":"H-0121"},{"fecha":"2025-12-31","tipo":"Gasto","cat":"Renta","concepto":"Renta de enero, pagada por adelantado","monto":5500.0,"pago":"Efectivo","origen":"Histórico","notas":"Fecha de pago supuesta: último día del mes anterior","id":"H-0131","per":"2026-01"},{"fecha":"2026-01-31","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del mes según punto de venta","monto":15641.33,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0122"},{"fecha":"2026-01-31","tipo":"Ingreso","cat":"Venta de recargas","concepto":"Recargas del mes según punto de venta","monto":1821.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0123"},{"fecha":"2026-01-31","tipo":"Ingreso","cat":"Ingreso agua","concepto":"Venta de agua del mes","monto":3600.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0124"},{"fecha":"2026-01-31","tipo":"Ingreso","cat":"Ingreso máquinas","concepto":"Máquinas (peluches y pinball)","monto":1080.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0125"},{"fecha":"2026-01-31","tipo":"Gasto","cat":"Costo de producto vendido","concepto":"Costo de lo vendido según punto de venta","monto":7802.29,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0126"},{"fecha":"2026-01-31","tipo":"Gasto","cat":"Costo de recargas","concepto":"Costo de las recargas vendidas","monto":1700.0,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0127"},{"fecha":"2026-01-31","tipo":"Gasto","cat":"Pipa y gastos de agua","concepto":"Pipa / mantenimiento de agua","monto":1000.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0128"},{"fecha":"2026-01-31","tipo":"Gasto","cat":"Sueldos","concepto":"Nómina del mes","monto":7060.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0129"},{"fecha":"2026-01-31","tipo":"Gasto","cat":"Comisiones y bonos","concepto":"Comisiones y bonos pagados","monto":80.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0130"},{"fecha":"2026-01-31","tipo":"Gasto","cat":"Internet","concepto":"Internet","monto":349.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0132"},{"fecha":"2026-01-31","tipo":"Gasto","cat":"Gastos administrativos","concepto":"Gastos administrativos","monto":4949.9,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0133"},{"fecha":"2026-01-31","tipo":"Gasto","cat":"Compra de mercancía","concepto":"Compras estimadas = costo de lo vendido","monto":7802.29,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real de compras; sustituir por el total real","id":"H-0134"},{"fecha":"2026-01-31","tipo":"Gasto","cat":"Compra de saldo para recargas","concepto":"Saldo estimado = costo de recargas","monto":1700.0,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real; sustituir por el saldo comprado","id":"H-0135"},{"fecha":"2026-01-31","tipo":"Gasto","cat":"Renta","concepto":"Renta de febrero, pagada por adelantado","monto":5500.0,"pago":"Efectivo","origen":"Histórico","notas":"Fecha de pago supuesta: último día del mes anterior","id":"H-0145","per":"2026-02"},{"fecha":"2026-02-28","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del mes según punto de venta","monto":16694.97,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0136"},{"fecha":"2026-02-28","tipo":"Ingreso","cat":"Venta de recargas","concepto":"Recargas del mes según punto de venta","monto":2863.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0137"},{"fecha":"2026-02-28","tipo":"Ingreso","cat":"Ingreso agua","concepto":"Venta de agua del mes","monto":3930.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0138"},{"fecha":"2026-02-28","tipo":"Ingreso","cat":"Ingreso máquinas","concepto":"Máquinas (peluches y pinball)","monto":1375.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0139"},{"fecha":"2026-02-28","tipo":"Gasto","cat":"Costo de producto vendido","concepto":"Costo de lo vendido según punto de venta","monto":8277.72,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0140"},{"fecha":"2026-02-28","tipo":"Gasto","cat":"Costo de recargas","concepto":"Costo de las recargas vendidas","monto":2690.0,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0141"},{"fecha":"2026-02-28","tipo":"Gasto","cat":"Pipa y gastos de agua","concepto":"Pipa / mantenimiento de agua","monto":1000.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0142"},{"fecha":"2026-02-28","tipo":"Gasto","cat":"Sueldos","concepto":"Nómina del mes","monto":5650.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0143"},{"fecha":"2026-02-28","tipo":"Gasto","cat":"Comisiones y bonos","concepto":"Comisiones y bonos pagados","monto":70.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0144"},{"fecha":"2026-02-28","tipo":"Gasto","cat":"Internet","concepto":"Internet","monto":549.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0146"},{"fecha":"2026-02-28","tipo":"Gasto","cat":"Gastos administrativos","concepto":"Gastos administrativos","monto":4220.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0147"},{"fecha":"2026-02-28","tipo":"Gasto","cat":"Compra de mercancía","concepto":"Compras estimadas = costo de lo vendido","monto":8277.72,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real de compras; sustituir por el total real","id":"H-0148"},{"fecha":"2026-02-28","tipo":"Gasto","cat":"Compra de saldo para recargas","concepto":"Saldo estimado = costo de recargas","monto":2690.0,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real; sustituir por el saldo comprado","id":"H-0149"},{"fecha":"2026-02-28","tipo":"Gasto","cat":"Renta","concepto":"Renta de marzo, pagada por adelantado","monto":5000.0,"pago":"Efectivo","origen":"Histórico","notas":"Fecha de pago supuesta: último día del mes anterior","id":"H-0158","per":"2026-03"},{"fecha":"2026-03-31","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del mes según punto de venta","monto":17421.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0150"},{"fecha":"2026-03-31","tipo":"Ingreso","cat":"Venta de recargas","concepto":"Recargas del mes según punto de venta","monto":2521.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0151"},{"fecha":"2026-03-31","tipo":"Ingreso","cat":"Ingreso agua","concepto":"Venta de agua del mes","monto":3827.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0152"},{"fecha":"2026-03-31","tipo":"Ingreso","cat":"Ingreso máquinas","concepto":"Máquinas (peluches y pinball)","monto":855.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0153"},{"fecha":"2026-03-31","tipo":"Gasto","cat":"Costo de producto vendido","concepto":"Costo de lo vendido según punto de venta","monto":8864.45,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0154"},{"fecha":"2026-03-31","tipo":"Gasto","cat":"Costo de recargas","concepto":"Costo de las recargas vendidas","monto":2380.0,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0155"},{"fecha":"2026-03-31","tipo":"Gasto","cat":"Sueldos","concepto":"Nómina del mes","monto":5820.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0156"},{"fecha":"2026-03-31","tipo":"Gasto","cat":"Comisiones y bonos","concepto":"Comisiones y bonos pagados","monto":145.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0157"},{"fecha":"2026-03-31","tipo":"Gasto","cat":"Internet","concepto":"Internet","monto":849.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0159"},{"fecha":"2026-03-31","tipo":"Gasto","cat":"Gastos administrativos","concepto":"Gastos administrativos","monto":192.9,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0160"},{"fecha":"2026-03-31","tipo":"Gasto","cat":"Compra de mercancía","concepto":"Compras estimadas = costo de lo vendido","monto":8864.45,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real de compras; sustituir por el total real","id":"H-0161"},{"fecha":"2026-03-31","tipo":"Gasto","cat":"Compra de saldo para recargas","concepto":"Saldo estimado = costo de recargas","monto":2380.0,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real; sustituir por el saldo comprado","id":"H-0162"},{"fecha":"2026-03-31","tipo":"Gasto","cat":"Renta","concepto":"Renta de abril, pagada por adelantado","monto":4000.0,"pago":"Efectivo","origen":"Histórico","notas":"Fecha de pago supuesta: último día del mes anterior","id":"H-0172","per":"2026-04"},{"fecha":"2026-04-30","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del mes según punto de venta","monto":23750.71,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0163"},{"fecha":"2026-04-30","tipo":"Ingreso","cat":"Venta de recargas","concepto":"Recargas del mes según punto de venta","monto":2445.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0164"},{"fecha":"2026-04-30","tipo":"Ingreso","cat":"Ingreso agua","concepto":"Venta de agua del mes","monto":3937.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0165"},{"fecha":"2026-04-30","tipo":"Ingreso","cat":"Ingreso máquinas","concepto":"Máquinas (peluches y pinball)","monto":1065.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0166"},{"fecha":"2026-04-30","tipo":"Gasto","cat":"Costo de producto vendido","concepto":"Costo de lo vendido según punto de venta","monto":12201.69,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0167"},{"fecha":"2026-04-30","tipo":"Gasto","cat":"Costo de recargas","concepto":"Costo de las recargas vendidas","monto":2290.0,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0168"},{"fecha":"2026-04-30","tipo":"Gasto","cat":"Pipa y gastos de agua","concepto":"Pipa / mantenimiento de agua","monto":1000.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0169"},{"fecha":"2026-04-30","tipo":"Gasto","cat":"Sueldos","concepto":"Nómina del mes","monto":7910.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0170"},{"fecha":"2026-04-30","tipo":"Gasto","cat":"Comisiones y bonos","concepto":"Comisiones y bonos pagados","monto":600.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0171"},{"fecha":"2026-04-30","tipo":"Gasto","cat":"Internet","concepto":"Internet","monto":349.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0173"},{"fecha":"2026-04-30","tipo":"Gasto","cat":"Gastos administrativos","concepto":"Gastos administrativos","monto":182.9,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0174"},{"fecha":"2026-04-30","tipo":"Gasto","cat":"Compra de mercancía","concepto":"Compras estimadas = costo de lo vendido","monto":12201.69,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real de compras; sustituir por el total real","id":"H-0175"},{"fecha":"2026-04-30","tipo":"Gasto","cat":"Compra de saldo para recargas","concepto":"Saldo estimado = costo de recargas","monto":2290.0,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real; sustituir por el saldo comprado","id":"H-0176"},{"fecha":"2026-04-30","tipo":"Gasto","cat":"Renta","concepto":"Renta de mayo, pagada por adelantado","monto":4000.0,"pago":"Efectivo","origen":"Histórico","notas":"Fecha de pago supuesta: último día del mes anterior","id":"H-0186","per":"2026-05"},{"fecha":"2026-05-31","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del mes según punto de venta","monto":30482.62,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0177"},{"fecha":"2026-05-31","tipo":"Ingreso","cat":"Venta de recargas","concepto":"Recargas del mes según punto de venta","monto":3650.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0178"},{"fecha":"2026-05-31","tipo":"Ingreso","cat":"Ingreso agua","concepto":"Venta de agua del mes","monto":2931.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0179"},{"fecha":"2026-05-31","tipo":"Ingreso","cat":"Ingreso máquinas","concepto":"Máquinas (peluches y pinball)","monto":1025.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0180"},{"fecha":"2026-05-31","tipo":"Gasto","cat":"Costo de producto vendido","concepto":"Costo de lo vendido según punto de venta","monto":15594.97,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0181"},{"fecha":"2026-05-31","tipo":"Gasto","cat":"Costo de recargas","concepto":"Costo de las recargas vendidas","monto":3440.0,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0182"},{"fecha":"2026-05-31","tipo":"Gasto","cat":"Pipa y gastos de agua","concepto":"Pipa / mantenimiento de agua","monto":1000.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0183"},{"fecha":"2026-05-31","tipo":"Gasto","cat":"Sueldos","concepto":"Nómina del mes","monto":8390.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0184"},{"fecha":"2026-05-31","tipo":"Gasto","cat":"Comisiones y bonos","concepto":"Comisiones y bonos pagados","monto":500.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0185"},{"fecha":"2026-05-31","tipo":"Gasto","cat":"Internet","concepto":"Internet","monto":349.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0187"},{"fecha":"2026-05-31","tipo":"Gasto","cat":"Gastos administrativos","concepto":"Gastos administrativos","monto":270.9,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0188"},{"fecha":"2026-05-31","tipo":"Gasto","cat":"Compra de mercancía","concepto":"Compras estimadas = costo de lo vendido","monto":15594.97,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real de compras; sustituir por el total real","id":"H-0189"},{"fecha":"2026-05-31","tipo":"Gasto","cat":"Compra de saldo para recargas","concepto":"Saldo estimado = costo de recargas","monto":3440.0,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real; sustituir por el saldo comprado","id":"H-0190"},{"fecha":"2026-05-31","tipo":"Gasto","cat":"Renta","concepto":"Renta de junio, pagada por adelantado","monto":4000.0,"pago":"Efectivo","origen":"Histórico","notas":"Fecha de pago supuesta: último día del mes anterior","id":"H-0199","per":"2026-06"},{"fecha":"2026-06-30","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del mes según punto de venta","monto":21466.83,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0191"},{"fecha":"2026-06-30","tipo":"Ingreso","cat":"Venta de recargas","concepto":"Recargas del mes según punto de venta","monto":2969.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0192"},{"fecha":"2026-06-30","tipo":"Ingreso","cat":"Ingreso agua","concepto":"Venta de agua del mes","monto":2600.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0193"},{"fecha":"2026-06-30","tipo":"Ingreso","cat":"Ingreso máquinas","concepto":"Máquinas (peluches y pinball)","monto":945.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0194"},{"fecha":"2026-06-30","tipo":"Gasto","cat":"Costo de producto vendido","concepto":"Costo de lo vendido según punto de venta","monto":10937.27,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0195"},{"fecha":"2026-06-30","tipo":"Gasto","cat":"Costo de recargas","concepto":"Costo de las recargas vendidas","monto":2790.0,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0196"},{"fecha":"2026-06-30","tipo":"Gasto","cat":"Sueldos","concepto":"Nómina del mes","monto":7625.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0197"},{"fecha":"2026-06-30","tipo":"Gasto","cat":"Comisiones y bonos","concepto":"Comisiones y bonos pagados","monto":400.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0198"},{"fecha":"2026-06-30","tipo":"Gasto","cat":"Internet","concepto":"Internet","monto":349.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0200"},{"fecha":"2026-06-30","tipo":"Gasto","cat":"Gastos administrativos","concepto":"Gastos administrativos","monto":170.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0201"},{"fecha":"2026-06-30","tipo":"Gasto","cat":"Compra de mercancía","concepto":"Compras estimadas = costo de lo vendido","monto":10937.27,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real de compras; sustituir por el total real","id":"H-0202"},{"fecha":"2026-06-30","tipo":"Gasto","cat":"Compra de saldo para recargas","concepto":"Saldo estimado = costo de recargas","monto":2790.0,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real; sustituir por el saldo comprado","id":"H-0203"},{"fecha":"2026-06-30","tipo":"Gasto","cat":"Renta","concepto":"Renta de julio, pagada por adelantado","monto":4000.0,"pago":"Efectivo","origen":"Histórico","notas":"Fecha de pago supuesta: último día del mes anterior","id":"H-0212","per":"2026-07"},{"fecha":"2026-07-31","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del mes según punto de venta","monto":25095.5,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0204"},{"fecha":"2026-07-31","tipo":"Ingreso","cat":"Venta de recargas","concepto":"Recargas del mes según punto de venta","monto":3149.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0205"},{"fecha":"2026-07-31","tipo":"Ingreso","cat":"Ingreso agua","concepto":"Venta de agua del mes","monto":2347.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0206"},{"fecha":"2026-07-31","tipo":"Ingreso","cat":"Ingreso máquinas","concepto":"Máquinas (peluches y pinball)","monto":885.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0207"},{"fecha":"2026-07-31","tipo":"Gasto","cat":"Costo de producto vendido","concepto":"Costo de lo vendido según punto de venta","monto":13090.28,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0208"},{"fecha":"2026-07-31","tipo":"Gasto","cat":"Costo de recargas","concepto":"Costo de las recargas vendidas","monto":2970.0,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0209"},{"fecha":"2026-07-31","tipo":"Gasto","cat":"Sueldos","concepto":"Nómina del mes","monto":8116.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0210"},{"fecha":"2026-07-31","tipo":"Gasto","cat":"Comisiones y bonos","concepto":"Comisiones y bonos pagados","monto":120.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0211"},{"fecha":"2026-07-31","tipo":"Gasto","cat":"Internet","concepto":"Internet","monto":349.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0213"},{"fecha":"2026-07-31","tipo":"Gasto","cat":"Gastos administrativos","concepto":"Gastos administrativos","monto":75.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0214"},{"fecha":"2026-07-31","tipo":"Gasto","cat":"Compra de mercancía","concepto":"Compras estimadas = costo de lo vendido","monto":13090.28,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real de compras; sustituir por el total real","id":"H-0215"},{"fecha":"2026-07-31","tipo":"Gasto","cat":"Compra de saldo para recargas","concepto":"Saldo estimado = costo de recargas","monto":2970.0,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real; sustituir por el saldo comprado","id":"H-0216"},{"fecha":"2026-07-31","tipo":"Gasto","cat":"Renta","concepto":"Renta de agosto, pagada por adelantado","monto":4000.0,"pago":"Efectivo","origen":"Histórico","notas":"Fecha de pago supuesta: último día del mes anterior","id":"H-0225","per":"2026-08"},{"fecha":"2026-08-31","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del mes según punto de venta","monto":27362.79,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0217"},{"fecha":"2026-08-31","tipo":"Ingreso","cat":"Venta de recargas","concepto":"Recargas del mes según punto de venta","monto":2618.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0218"},{"fecha":"2026-08-31","tipo":"Ingreso","cat":"Ingreso agua","concepto":"Venta de agua del mes","monto":2848.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0219"},{"fecha":"2026-08-31","tipo":"Ingreso","cat":"Ingreso máquinas","concepto":"Máquinas (peluches y pinball)","monto":230.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0220"},{"fecha":"2026-08-31","tipo":"Gasto","cat":"Costo de producto vendido","concepto":"Costo de lo vendido según punto de venta","monto":13217.16,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0221"},{"fecha":"2026-08-31","tipo":"Gasto","cat":"Costo de recargas","concepto":"Costo de las recargas vendidas","monto":2470.0,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0222"},{"fecha":"2026-08-31","tipo":"Gasto","cat":"Pipa y gastos de agua","concepto":"Pipa / mantenimiento de agua","monto":1000.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0223"},{"fecha":"2026-08-31","tipo":"Gasto","cat":"Sueldos","concepto":"Nómina del mes","monto":7405.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0224"},{"fecha":"2026-08-31","tipo":"Gasto","cat":"Internet","concepto":"Internet","monto":349.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0226"},{"fecha":"2026-08-31","tipo":"Gasto","cat":"Gastos administrativos","concepto":"Gastos administrativos","monto":177.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0227"},{"fecha":"2026-08-31","tipo":"Gasto","cat":"Compra de mercancía","concepto":"Compras estimadas = costo de lo vendido","monto":13217.16,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real de compras; sustituir por el total real","id":"H-0228"},{"fecha":"2026-08-31","tipo":"Gasto","cat":"Compra de saldo para recargas","concepto":"Saldo estimado = costo de recargas","monto":2470.0,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real; sustituir por el saldo comprado","id":"H-0229"},{"fecha":"2026-08-31","tipo":"Gasto","cat":"Renta","concepto":"Renta de septiembre, pagada por adelantado","monto":4000.0,"pago":"Efectivo","origen":"Histórico","notas":"Fecha de pago supuesta: último día del mes anterior","id":"H-0239","per":"2026-09"},{"fecha":"2026-09-30","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del mes según punto de venta","monto":19240.62,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0230"},{"fecha":"2026-09-30","tipo":"Ingreso","cat":"Venta de recargas","concepto":"Recargas del mes según punto de venta","monto":2583.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0231"},{"fecha":"2026-09-30","tipo":"Ingreso","cat":"Ingreso agua","concepto":"Venta de agua del mes","monto":2123.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0232"},{"fecha":"2026-09-30","tipo":"Ingreso","cat":"Ingreso máquinas","concepto":"Máquinas (peluches y pinball)","monto":2570.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0233"},{"fecha":"2026-09-30","tipo":"Gasto","cat":"Costo de producto vendido","concepto":"Costo de lo vendido según punto de venta","monto":9893.25,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0234"},{"fecha":"2026-09-30","tipo":"Gasto","cat":"Costo de recargas","concepto":"Costo de las recargas vendidas","monto":2420.0,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0235"},{"fecha":"2026-09-30","tipo":"Gasto","cat":"Pipa y gastos de agua","concepto":"Pipa / mantenimiento de agua","monto":1000.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0236"},{"fecha":"2026-09-30","tipo":"Gasto","cat":"Sueldos","concepto":"Nómina de septiembre pagada en septiembre","monto":5980.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0237"},{"fecha":"2026-09-30","tipo":"Gasto","cat":"Comisiones y bonos","concepto":"Comisiones y bonos pagados","monto":134.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0238"},{"fecha":"2026-09-30","tipo":"Gasto","cat":"Internet","concepto":"Internet","monto":349.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0240"},{"fecha":"2026-09-30","tipo":"Gasto","cat":"Gastos administrativos","concepto":"Gastos administrativos","monto":100.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0241"},{"fecha":"2026-09-30","tipo":"Gasto","cat":"Compra de mercancía","concepto":"Compras estimadas con inventario","monto":11305.49,"pago":"Efectivo","origen":"Estimado","notas":"Inventario final − inicial + costo de lo vendido","id":"H-0242"},{"fecha":"2026-09-30","tipo":"Gasto","cat":"Compra de saldo para recargas","concepto":"Saldo estimado = costo de recargas","monto":2420.0,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real; sustituir por el saldo comprado","id":"H-0243"},{"fecha":"2026-09-30","tipo":"Gasto","cat":"Renta","concepto":"Renta de octubre, pagada por adelantado","monto":4000.0,"pago":"Efectivo","origen":"Histórico","notas":"Fecha de pago supuesta: último día del mes anterior","id":"H-0250","per":"2026-10"},{"id":"L-S09","fecha":"2026-10-01","per":"2026-09","tipo":"Gasto","cat":"Sueldos","concepto":"3 días de septiembre pagados en octubre","monto":780.0,"pago":"Efectivo","origen":"Histórico","notas":"3 días × $260. Día exacto del pago aproximado"},{"id":"L-0257","fecha":"2026-10-07","tipo":"Gasto","cat":"Devoluciones pagadas","concepto":"Devolución (libro de caja)","monto":217.0,"pago":"Efectivo","origen":"Histórico","notas":""},{"id":"L-0258","fecha":"2026-10-15","tipo":"Ingreso","cat":"Devoluciones recibidas","concepto":"Devolución (libro de caja)","monto":1935.0,"pago":"Efectivo","origen":"Histórico","notas":""},{"fecha":"2026-10-31","tipo":"Ingreso","cat":"Venta de recargas","concepto":"Recargas del mes según punto de venta","monto":2997.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0245"},{"fecha":"2026-10-31","tipo":"Ingreso","cat":"Ingreso agua","concepto":"Venta de agua del mes","monto":2631.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0246"},{"fecha":"2026-10-31","tipo":"Gasto","cat":"Costo de producto vendido","concepto":"Costo de lo vendido según punto de venta","monto":11697.48,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0247"},{"fecha":"2026-10-31","tipo":"Gasto","cat":"Costo de recargas","concepto":"Costo de las recargas vendidas","monto":2820.0,"pago":"No aplica","origen":"Histórico","notas":"","id":"H-0248"},{"fecha":"2026-10-31","tipo":"Gasto","cat":"Sueldos","concepto":"Nómina de octubre según libro de caja","monto":7800.0,"pago":"Efectivo","origen":"Histórico","notas":"30 días × $260. En efectivo se pagaron $7,750: se descontaron $50 de un faltante cobrado a la persona","id":"H-0249"},{"fecha":"2026-10-31","tipo":"Gasto","cat":"Internet","concepto":"Internet","monto":349.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0251"},{"fecha":"2026-10-31","tipo":"Gasto","cat":"Gastos administrativos","concepto":"Gastos administrativos","monto":100.0,"pago":"Efectivo","origen":"Histórico","notas":"","id":"H-0252"},{"fecha":"2026-10-31","tipo":"Gasto","cat":"Compra de saldo para recargas","concepto":"Saldo estimado = costo de recargas","monto":2820.0,"pago":"Efectivo","origen":"Estimado","notas":"Sin dato real; sustituir por el saldo comprado","id":"H-0254"},{"id":"L-0252","fecha":"2026-10-31","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del mes según punto de venta; forma de pago según libro de caja","monto":14550.22,"pago":"Efectivo","origen":"Histórico","notas":""},{"id":"L-0253","fecha":"2026-10-31","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del mes según punto de venta; forma de pago según libro de caja","monto":6406.5,"pago":"Transferencia","origen":"Histórico","notas":""},{"id":"L-0254","fecha":"2026-10-31","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del mes según punto de venta; forma de pago según libro de caja","monto":1912.0,"pago":"Tarjeta","origen":"Histórico","notas":""},{"id":"L-0255","fecha":"2026-10-31","tipo":"Gasto","cat":"Faltante de caja","concepto":"Punto de venta contra libro de caja","monto":612.22,"pago":"Efectivo","origen":"Histórico","notas":"Punto de venta $25865.72; libro de caja $25203.50; diferencia $662.22 menos $50 recuperados por descuento en nómina"},{"id":"L-0256","fecha":"2026-10-31","tipo":"Gasto","cat":"Compra de mercancía","concepto":"Compras del mes según libro de caja","monto":9783.5,"pago":"Efectivo","origen":"Histórico","notas":"Columna Compras y renta menos $3,500 de renta del día 31"},{"id":"L-R11","fecha":"2026-10-31","per":"2026-11","tipo":"Gasto","cat":"Renta","concepto":"Renta de noviembre, pagada por adelantado","monto":3500.0,"pago":"Efectivo","origen":"Histórico","notas":"Libro de caja: pagada el 31 de octubre"},{"id":"L-CT10","fecha":"2026-10-31","tipo":"Gasto","cat":"Comisión por tarjeta","concepto":"4% de $1,912 cobrados con tarjeta en octubre","monto":76.48,"pago":"Tarjeta","origen":"Histórico","notas":"Tarjeta según libro de caja"},{"id":"L-0259","fecha":"2026-11-01","tipo":"Gasto","cat":"Compra de mercancía","concepto":"Compras del día","monto":214.0,"pago":"Efectivo","origen":"Captura","notas":"Libro de caja"},{"id":"L-0260","fecha":"2026-11-02","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del día","monto":126.0,"pago":"Efectivo","origen":"Captura","notas":"Libro de caja"},{"id":"L-0261","fecha":"2026-11-02","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del día","monto":349.0,"pago":"Transferencia","origen":"Captura","notas":"Libro de caja"},{"id":"L-0262","fecha":"2026-11-02","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del día","monto":123.0,"pago":"Tarjeta","origen":"Captura","notas":"Libro de caja"},{"id":"L-0263","fecha":"2026-11-02","tipo":"Ingreso","cat":"Venta de recargas","concepto":"Venta del día","monto":130.0,"pago":"Efectivo","origen":"Captura","notas":"Libro de caja"},{"id":"CR-2026-11-02","fecha":"2026-11-02","tipo":"Gasto","cat":"Costo de recargas","concepto":"Estimado: 92% de la recarga","monto":119.6,"pago":"No aplica","origen":"Captura","notas":"Se calcula solo"},{"id":"SR-2026-11-02","fecha":"2026-11-02","tipo":"Gasto","cat":"Compra de saldo para recargas","concepto":"Estimado: 92% de la recarga","monto":119.6,"pago":"Efectivo","origen":"Captura","notas":"Se calcula solo"},{"id":"L-0266","fecha":"2026-11-02","tipo":"Ingreso","cat":"Ingreso agua","concepto":"Venta del día","monto":266.0,"pago":"Efectivo","origen":"Captura","notas":"Libro de caja"},{"id":"L-0267","fecha":"2026-11-02","tipo":"Gasto","cat":"Compra de mercancía","concepto":"Compras del día","monto":501.0,"pago":"Efectivo","origen":"Captura","notas":"Libro de caja"},{"id":"CT-2026-11-02","fecha":"2026-11-02","tipo":"Gasto","cat":"Comisión por tarjeta","concepto":"Estimado: 4% de lo cobrado con tarjeta","monto":4.92,"pago":"Tarjeta","origen":"Captura","notas":"Se calcula solo"},{"id":"L-0268","fecha":"2026-11-03","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del día","monto":323.0,"pago":"Efectivo","origen":"Captura","notas":"Libro de caja"},{"id":"L-0269","fecha":"2026-11-03","tipo":"Ingreso","cat":"Venta de recargas","concepto":"Venta del día","monto":270.0,"pago":"Efectivo","origen":"Captura","notas":"Libro de caja"},{"id":"CR-2026-11-03","fecha":"2026-11-03","tipo":"Gasto","cat":"Costo de recargas","concepto":"Estimado: 92% de la recarga","monto":248.4,"pago":"No aplica","origen":"Captura","notas":"Se calcula solo"},{"id":"SR-2026-11-03","fecha":"2026-11-03","tipo":"Gasto","cat":"Compra de saldo para recargas","concepto":"Estimado: 92% de la recarga","monto":248.4,"pago":"Efectivo","origen":"Captura","notas":"Se calcula solo"},{"id":"L-0272","fecha":"2026-11-03","tipo":"Ingreso","cat":"Ingreso agua","concepto":"Venta del día","monto":290.0,"pago":"Efectivo","origen":"Captura","notas":"Libro de caja"},{"id":"L-0273","fecha":"2026-11-03","tipo":"Gasto","cat":"Compra de mercancía","concepto":"Compras del día","monto":324.0,"pago":"Efectivo","origen":"Captura","notas":"Libro de caja"},{"id":"L-0274","fecha":"2026-11-04","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del día","monto":463.0,"pago":"Efectivo","origen":"Captura","notas":"Libro de caja"},{"id":"L-0275","fecha":"2026-11-04","tipo":"Ingreso","cat":"Venta de recargas","concepto":"Venta del día","monto":110.0,"pago":"Efectivo","origen":"Captura","notas":"Libro de caja"},{"id":"CR-2026-11-04","fecha":"2026-11-04","tipo":"Gasto","cat":"Costo de recargas","concepto":"Estimado: 92% de la recarga","monto":101.2,"pago":"No aplica","origen":"Captura","notas":"Se calcula solo"},{"id":"SR-2026-11-04","fecha":"2026-11-04","tipo":"Gasto","cat":"Compra de saldo para recargas","concepto":"Estimado: 92% de la recarga","monto":101.2,"pago":"Efectivo","origen":"Captura","notas":"Se calcula solo"},{"id":"L-0278","fecha":"2026-11-04","tipo":"Gasto","cat":"Compra de mercancía","concepto":"Compras del día","monto":586.0,"pago":"Efectivo","origen":"Captura","notas":"Libro de caja"},{"id":"L-0279","fecha":"2026-11-05","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del día","monto":211.0,"pago":"Efectivo","origen":"Captura","notas":"Libro de caja"},{"id":"L-0280","fecha":"2026-11-05","tipo":"Ingreso","cat":"Venta de recargas","concepto":"Venta del día","monto":50.0,"pago":"Efectivo","origen":"Captura","notas":"Libro de caja"},{"id":"CR-2026-11-05","fecha":"2026-11-05","tipo":"Gasto","cat":"Costo de recargas","concepto":"Estimado: 92% de la recarga","monto":46.0,"pago":"No aplica","origen":"Captura","notas":"Se calcula solo"},{"id":"SR-2026-11-05","fecha":"2026-11-05","tipo":"Gasto","cat":"Compra de saldo para recargas","concepto":"Estimado: 92% de la recarga","monto":46.0,"pago":"Efectivo","origen":"Captura","notas":"Se calcula solo"},{"id":"L-0283","fecha":"2026-11-05","tipo":"Gasto","cat":"Pipa y gastos de agua","concepto":"Pipa","monto":1000.0,"pago":"Efectivo","origen":"Captura","notas":"Libro de caja, columna Compras; se supuso que es la pipa del mes"},{"id":"L-0284","fecha":"2026-11-06","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del día","monto":332.0,"pago":"Efectivo","origen":"Captura","notas":"Libro de caja"},{"id":"L-0285","fecha":"2026-11-06","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del día","monto":141.0,"pago":"Tarjeta","origen":"Captura","notas":"Libro de caja"},{"id":"L-0286","fecha":"2026-11-06","tipo":"Ingreso","cat":"Venta de recargas","concepto":"Venta del día","monto":170.0,"pago":"Efectivo","origen":"Captura","notas":"Libro de caja"},{"id":"CR-2026-11-06","fecha":"2026-11-06","tipo":"Gasto","cat":"Costo de recargas","concepto":"Estimado: 92% de la recarga","monto":156.4,"pago":"No aplica","origen":"Captura","notas":"Se calcula solo"},{"id":"SR-2026-11-06","fecha":"2026-11-06","tipo":"Gasto","cat":"Compra de saldo para recargas","concepto":"Estimado: 92% de la recarga","monto":156.4,"pago":"Efectivo","origen":"Captura","notas":"Se calcula solo"},{"id":"L-0289","fecha":"2026-11-06","tipo":"Gasto","cat":"Compra de mercancía","concepto":"Compras del día","monto":726.0,"pago":"Efectivo","origen":"Captura","notas":"Libro de caja"},{"id":"CT-2026-11-06","fecha":"2026-11-06","tipo":"Gasto","cat":"Comisión por tarjeta","concepto":"Estimado: 4% de lo cobrado con tarjeta","monto":5.64,"pago":"Tarjeta","origen":"Captura","notas":"Se calcula solo"},{"id":"L-0290","fecha":"2026-11-07","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del día","monto":1470.0,"pago":"Efectivo","origen":"Captura","notas":"Libro de caja"},{"id":"L-0291","fecha":"2026-11-07","tipo":"Ingreso","cat":"Venta de producto","concepto":"Venta del día","monto":70.0,"pago":"Tarjeta","origen":"Captura","notas":"Libro de caja"},{"id":"L-0292","fecha":"2026-11-07","tipo":"Ingreso","cat":"Venta de recargas","concepto":"Venta del día","monto":210.0,"pago":"Efectivo","origen":"Captura","notas":"Libro de caja"},{"id":"CR-2026-11-07","fecha":"2026-11-07","tipo":"Gasto","cat":"Costo de recargas","concepto":"Estimado: 92% de la recarga","monto":193.2,"pago":"No aplica","origen":"Captura","notas":"Se calcula solo"},{"id":"SR-2026-11-07","fecha":"2026-11-07","tipo":"Gasto","cat":"Compra de saldo para recargas","concepto":"Estimado: 92% de la recarga","monto":193.2,"pago":"Efectivo","origen":"Captura","notas":"Se calcula solo"},{"id":"L-0295","fecha":"2026-11-07","tipo":"Ingreso","cat":"Ingreso agua","concepto":"Venta del día","monto":260.0,"pago":"Efectivo","origen":"Captura","notas":"Libro de caja"},{"id":"L-0296","fecha":"2026-11-07","tipo":"Ingreso","cat":"Ingreso máquinas","concepto":"Máquinas","monto":550.0,"pago":"Efectivo","origen":"Captura","notas":"Libro de caja"},{"id":"L-0297","fecha":"2026-11-07","tipo":"Gasto","cat":"Compra de mercancía","concepto":"Compras del día","monto":265.8,"pago":"Efectivo","origen":"Captura","notas":"Libro de caja"},{"id":"L-0298","fecha":"2026-11-07","tipo":"Gasto","cat":"Devoluciones pagadas","concepto":"Devolución","monto":375.0,"pago":"Efectivo","origen":"Captura","notas":"Libro de caja"},{"id":"L-0299","fecha":"2026-11-07","tipo":"Gasto","cat":"Sueldos","concepto":"Sueldos pagados","monto":1560.0,"pago":"Efectivo","origen":"Captura","notas":"Libro de caja"},{"id":"CT-2026-11-07","fecha":"2026-11-07","tipo":"Gasto","cat":"Comisión por tarjeta","concepto":"Estimado: 4% de lo cobrado con tarjeta","monto":2.8,"pago":"Tarjeta","origen":"Captura","notas":"Se calcula solo"}],"deps":[{"d":"Farmacia","v":155352,"u":86926},{"d":"Tabaco","v":24837,"u":5573},{"d":"Cuidado Personal","v":20901,"u":9430},{"d":"Abarrotes","v":15158,"u":5529},{"d":"Estética","v":13240,"u":6673},{"d":"Vinos y Licores","v":10072,"u":3254},{"d":"Juguetería","v":7347,"u":3435},{"d":"Varios","v":7183,"u":4502},{"d":"Dulcería","v":4780,"u":2740},{"d":"Naturista","v":4408,"u":1939},{"d":"Bebé","v":3958,"u":1514}],"tps":[{"t":"CEFTRIAXONA","d":"Farmacia","v":10355,"u":7526,"n":162},{"t":"CIGARRO","d":"Tabaco","v":24837,"u":5573,"n":4208},{"t":"KETOROLACO/TRAMADOL","d":"Farmacia","v":5778,"u":3756,"n":61},{"t":"AMOXICILINA/ÁCIDO CLAVULÁNICO","d":"Farmacia","v":5413,"u":3079,"n":53},{"t":"JUGUETE","d":"Juguetería","v":6182,"u":2778,"n":73},{"t":"BAÑO","d":"Varios","v":3424,"u":2320,"n":368},{"t":"DEXAMETASONA","d":"Farmacia","v":3235,"u":2290,"n":129},{"t":"IBUPROFENO","d":"Farmacia","v":4065,"u":2261,"n":96},{"t":"SUERO ORAL","d":"Farmacia","v":7927,"u":2251,"n":304},{"t":"COMPLEJO B/DICLOFENACO","d":"Farmacia","v":3930,"u":2116,"n":36},{"t":"JERINGA","d":"Farmacia","v":3120,"u":2000,"n":520},{"t":"AMANTADINA/CLORFENAMINA/PARACETAMOL","d":"Farmacia","v":3565,"u":1995,"n":58},{"t":"TINTE","d":"Estética","v":5146,"u":1993,"n":54},{"t":"DESODORANTE","d":"Cuidado Personal","v":4438,"u":1954,"n":60},{"t":"CERVEZA","d":"Vinos y Licores","v":5531,"u":1922,"n":182}],"invs":[{"d":"Farmacia","c":15580,"v":38568,"s":283},{"d":"Estética","c":3569,"v":7442,"s":91},{"d":"Cuidado Personal","c":3181,"v":5921,"s":59},{"d":"Naturista","c":1013,"v":1735,"s":16},{"d":"Varios","c":673,"v":1760,"s":25},{"d":"Abarrotes","c":666,"v":1158,"s":10},{"d":"Tabaco","c":441,"v":925,"s":3},{"d":"Juguetería","c":424,"v":1139,"s":11},{"d":"Bebé","c":363,"v":879,"s":8},{"d":"Electrónica","c":311,"v":565,"s":5},{"d":"Dulcería","c":246,"v":1618,"s":11},{"d":"Vinos y Licores","c":82,"v":112,"s":1}]};
+const KEY='pharmaDelta.v6';
+const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const cat=n=>CATS.find(c=>c[0]===n);
+const byER=s=>CATS.filter(c=>c[2]===s).map(c=>c[0]);
+const ING=byER('Ingresos'), COS=byER('Costo de ventas'), GAS=byER('Gastos de operación');
+const ENT=CATS.filter(c=>c[1]==='Ingreso'&&c[3]==='Operación').map(c=>c[0]);
+const SAL=CATS.filter(c=>c[1]==='Gasto'&&c[3]==='Operación').map(c=>c[0]);
+
+/* ---------- almacenamiento ---------- */
+let mem=null;
+const store={
+  get(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return mem}},
+  set(v){mem=v;try{localStorage.setItem(KEY,JSON.stringify(v))}catch(e){}}
+};
+const seedMovs=()=>SEED.movs.map(m=>({...m}));
+let S=store.get()||{movs:seedMovs(),cfg:{saldo:2449.57,saldoMes:'2026-11',url:'',clave:''}};
+const save=()=>{store.set(S);reindex();renderAll()};
+
+/* ---------- cálculo ---------- */
+let IDX={},IDXF={},EST={},MONTHS=[];
+const perOf=m=>m.per||(m.fecha||'').slice(0,7);
+function reindex(){
+  IDX={};IDXF={};EST={};
+  for(const m of S.movs){
+    const k=(m.fecha||'').slice(0,7); if(k.length!==7) continue;
+    (IDXF[k]??={})[m.cat]=(IDXF[k][m.cat]||0)+(+m.monto||0);
+    const pk=perOf(m);(IDX[pk]??={})[m.cat]=(IDX[pk][m.cat]||0)+(+m.monto||0);
+    if(m.origen==='Estimado') EST[k]=true;
+  }
+  const ks=[...new Set([...Object.keys(IDX),...Object.keys(IDXF)])].sort(); MONTHS=[];
+  if(ks.length){let [y,mo]=ks[0].split('-').map(Number);const end=ks.at(-1);
+    for(;;){const k=y+'-'+String(mo).padStart(2,'0');MONTHS.push(k);if(k>=end)break;mo++;if(mo>12){mo=1;y++}}}
+}
+const sumCats=(ms,cs,I=IDX)=>ms.reduce((a,k)=>a+cs.reduce((b,c)=>b+((I[k]||{})[c]||0),0),0);
+function er(ms){ // ms: lista de meses
+  const v=c=>sumCats(ms,[c]);
+  const o={v,tIng:sumCats(ms,ING),tCos:sumCats(ms,COS),tGas:sumCats(ms,GAS)};
+  o.ub=o.tIng-o.tCos; o.un=o.ub-o.tGas;
+  o.mb=o.tIng?o.ub/o.tIng:0; o.mn=o.tIng?o.un/o.tIng:0;
+  const vp=v('Venta de producto'),cp=v('Costo de producto vendido');
+  o.vp=vp; o.mp=vp?(vp-cp)/vp:0;
+  o.pe=o.mp>0?Math.max(0,(o.tGas-((o.tIng-vp)-(o.tCos-cp)))/o.mp):0;
+  return o;
+}
+function fl(ms){
+  const v=c=>sumCats(ms,[c],IDXF);
+  const o={v,ent:sumCats(ms,ENT,IDXF),sal:sumCats(ms,SAL,IDXF),inv:v('Compra de equipo')};
+  o.fo=o.ent-o.sal;
+  o.fin=v('Aportación del dueño')+v('Préstamo recibido')-v('Retiro del dueño')-v('Pago de préstamo');
+  o.fn=o.fo-o.inv+o.fin;
+  const a=S.cfg.saldoMes||MONTHS[0],s0=+S.cfg.saldo||0,last=ms.at(-1);
+  o.si=ms[0]>=a?s0+flNet(MONTHS.filter(k=>k>=a&&k<ms[0])):null;
+  o.sf=last>=a?s0+flNet(MONTHS.filter(k=>k>=a&&k<=last)):null;
+  o.un=er(ms).un;
+  return o;
+}
+function flNet(ms){const v=c=>sumCats(ms,[c],IDXF);return sumCats(ms,ENT,IDXF)-sumCats(ms,SAL,IDXF)-v('Compra de equipo')+v('Aportación del dueño')+v('Préstamo recibido')-v('Retiro del dueño')-v('Pago de préstamo')}
+
+/* ---------- formato ---------- */
+const money=n=>{if(n==null)return '';const r=Math.round(n);return r===0?'–':(r<0?'−':'')+'$'+Math.abs(r).toLocaleString('es-MX')};
+const money0=n=>(Math.round(n)<0?'−':'')+'$'+Math.abs(Math.round(n)).toLocaleString('es-MX');
+const pct=n=>(n*100).toFixed(1).replace('-','−')+'%';
+const mlabel=k=>MES[+k.slice(5)-1]+' '+k.slice(2,4);
+const mlong=k=>['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][+k.slice(5)-1]+' de '+k.slice(0,4);
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const fdate=f=>f.slice(8)+'/'+f.slice(5,7)+'/'+f.slice(2,4);
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2600)}
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+/* ---------- navegación ---------- */
+function go(v){$$('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+v));
+  $$('#nav button').forEach(b=>b.dataset.v===v?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current'));
+  if(v==='tablero')renderTablero(); window.scrollTo(0,0)}
+$('#nav').addEventListener('click',e=>{const b=e.target.closest('button');if(b)go(b.dataset.v)});
+
+/* ---------- tablero ---------- */
+let tMes=null; const charts={};
+function defaultMonth(){const cur=today().slice(0,7);const done=MONTHS.filter(k=>k<cur&&(IDX[k]||{})['Venta de producto']);return done.at(-1)||MONTHS.at(-1)}
+function chart(id,cfg){if(typeof Chart==='undefined'){const c=$('#'+id);c.parentElement.innerHTML='<p class="empty">La gráfica necesita conexión a internet para cargarse.</p>';return}
+  charts[id]?.destroy();charts[id]=new Chart($('#'+id),cfg)}
+function baseOpts(extra={}){const ink=css('--muted'),line=css('--line');
+  return Object.assign({responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{labels:{color:ink,boxWidth:12,font:{family:'Instrument Sans'}}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+money0(c.parsed.y??c.parsed.x)}}},
+    scales:{x:{ticks:{color:ink,maxRotation:0,autoSkipPadding:8},grid:{display:false}},y:{ticks:{color:ink,callback:v=>'$'+(Math.abs(v)>=1000?(v/1000)+'k':v)},grid:{color:line}}}},extra)}
+function renderTablero(){
+  if(!MONTHS.length){$('#t-sub').textContent='Aún no hay movimientos. Empieza en Registrar.';return}
+  if(!tMes||!MONTHS.includes(tMes))tMes=defaultMonth();
+  $('#t-mes').innerHTML=[...MONTHS].reverse().map(k=>`<option value="${k}" ${k===tMes?'selected':''}>${mlabel(k)}</option>`).join('');
+  const i=MONTHS.indexOf(tMes),E=er([tMes]),F=fl([tMes]),P=i>0?er([MONTHS[i-1]]):null,FP=i>0?fl([MONTHS[i-1]]):null;
+  const parcial=tMes===today().slice(0,7);
+  $('#t-sub').innerHTML=mlong(tMes)[0].toUpperCase()+mlong(tMes).slice(1)+(parcial?' <span class="flag">mes en curso, cifras parciales</span>':'')+(E.vp&&!E.v('Costo de producto vendido')?' <span class="flag">falta el costo de producto: la utilidad se ve más alta de lo real</span>':'');
+  const d=(a,b)=>b==null?'':`${a-b>=0?'+':'−'}${money0(Math.abs(a-b))} contra ${mlabel(MONTHS[i-1])}`;
+  $('#t-kpis').innerHTML=[
+    ['Ingresos',money0(E.tIng),'',P&&d(E.tIng,P.tIng)],
+    ['Utilidad bruta',money0(E.ub),'','Margen '+pct(E.mb)],
+    ['Utilidad neta',money0(E.un),E.un>=0?'pos':'neg','Margen '+pct(E.mn)],
+    ['Flujo de caja del mes',money0(F.fn),F.fn>=0?'pos':'neg',(EST[tMes]?'Con compras estimadas':FP?d(F.fn,FP.fn):'')]
+  ].map(k=>`<div class="kpi"><small>${k[0]}</small><b class="num ${k[2]}">${k[1]}</b><i>${k[3]||''}</i></div>`).join('');
+  const per=x=>E.tIng?Math.round(x/E.tIng*100):0;
+  $('#t-story').innerHTML=E.tIng?`De cada <b>$100</b> que entraron, <b>$${per(E.tCos)}</b> se fueron en costo de lo vendido, <b>$${per(E.tGas)}</b> en sueldos, renta y gastos, y ${E.un>=0?`quedaron <b class="pos">$${per(E.un)}</b>`:`faltaron <b class="neg">$${Math.abs(per(E.un))}</b>`}.`:'Sin ingresos registrados en este mes.';
+  // cascada
+  const g=c=>E.v(c),steps=[['Farmacia',g('Venta de producto')],['Recargas',g('Venta de recargas')],['Agua',g('Ingreso agua')],['Máquinas y otros',g('Ingreso máquinas')+g('Otros ingresos')],
+    ['Costo de producto',-g('Costo de producto vendido')],['Costo de recargas',-g('Costo de recargas')],['Pipa y agua',-g('Pipa y gastos de agua')],
+    ['Sueldos y comisiones',-(g('Sueldos')+g('Comisiones y bonos'))],['Renta',-g('Renta')],
+    ['Otros gastos',-(E.tGas-g('Sueldos')-g('Comisiones y bonos')-g('Renta'))]].filter(s=>Math.abs(s[1])>0.5);
+  let run=0;const bars=steps.map(s=>{const a=run;run+=s[1];return [a,run]});
+  const labels=[...steps.map(s=>s[0]),'Utilidad neta'],data=[...bars,[0,E.un]];
+  const colors=[...steps.map(s=>s[1]>=0?css('--c1'):css('--neg')),E.un>=0?css('--pos'):css('--neg')];
+  chart('ch-wf',{type:'bar',data:{labels,datasets:[{data,backgroundColor:colors,borderRadius:3,barPercentage:.8}]},
+    options:baseOpts({plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>money0(c.raw[1]-c.raw[0])}}},scales:{x:{ticks:{color:css('--muted'),autoSkip:false,maxRotation:50,font:{size:11}},grid:{display:false}},y:{ticks:{color:css('--muted'),callback:v=>'$'+v/1000+'k'},grid:{color:css('--line')}}}})});
+  // tendencia
+  const L=MONTHS.map(mlabel),col=(c)=>MONTHS.map(k=>(IDX[k]||{})[c]||0),ers=MONTHS.map(k=>er([k])),fls=MONTHS.map(k=>fl([k]));
+  const stk=(label,vals,c)=>({type:'bar',label,data:vals,backgroundColor:css(c),stack:'s',order:2});
+  chart('ch-trend',{data:{labels:L,datasets:[
+    {type:'line',label:'Utilidad neta',data:ers.map(e=>e.un),borderColor:css('--ink'),backgroundColor:css('--ink'),borderWidth:2,pointRadius:2,tension:.25,order:1},
+    stk('Farmacia',col('Venta de producto'),'--c1'),stk('Recargas',col('Venta de recargas'),'--c2'),stk('Agua',col('Ingreso agua'),'--c3'),
+    stk('Máquinas y otros',MONTHS.map(k=>((IDX[k]||{})['Ingreso máquinas']||0)+((IDX[k]||{})['Otros ingresos']||0)),'--c4')]},
+    options:baseOpts({scales:{x:{stacked:true,ticks:{color:css('--muted'),maxRotation:0,autoSkipPadding:8},grid:{display:false}},y:{stacked:true,ticks:{color:css('--muted'),callback:v=>'$'+v/1000+'k'},grid:{color:css('--line')}}}})});
+  chart('ch-pe',{type:'line',data:{labels:L,datasets:[
+    {label:'Venta de producto',data:ers.map(e=>e.vp),borderColor:css('--c1'),backgroundColor:css('--c1'),borderWidth:2.5,pointRadius:2,tension:.25},
+    {label:'Punto de equilibrio',data:ers.map(e=>e.pe),borderColor:css('--neg'),backgroundColor:css('--neg'),borderWidth:2,borderDash:[6,4],pointRadius:0,tension:.25}]},options:baseOpts()});
+  chart('ch-caja',{data:{labels:L,datasets:[
+    {type:'line',label:'Saldo de caja',data:fls.map(f=>f.sf),borderColor:css('--ink'),backgroundColor:css('--ink'),borderWidth:2,pointRadius:2,tension:.25,order:1},
+    {type:'bar',label:'Flujo neto del mes',data:fls.map(f=>f.fn),backgroundColor:fls.map(f=>f.fn>=0?css('--c1'):css('--neg')),order:2}]},options:baseOpts()});
+  const nEst=MONTHS.filter(k=>EST[k]).length;
+  $('#t-cajacap').innerHTML=(nEst?`<span class="flag">${nEst} meses con compras estimadas</span> `:'')+'El saldo se lleva desde '+mlong(S.cfg.saldoMes||MONTHS[0])+', que arrancó con '+money0(+S.cfg.saldo||0)+'. Los retiros hay que registrarlos para que cuadre con lo que hay en la caja.';
+  const gs=(label,cs,c)=>({label,data:MONTHS.map(k=>sumCats([k],cs)),backgroundColor:css(c),stack:'g'});
+  chart('ch-gas',{type:'bar',data:{labels:L,datasets:[gs('Sueldos y comisiones',['Sueldos','Comisiones y bonos'],'--c1'),gs('Renta',['Renta'],'--c4'),
+    gs('Otros',GAS.filter(c=>!['Sueldos','Comisiones y bonos','Renta'].includes(c)),'--c5')]},
+    options:baseOpts({scales:{x:{stacked:true,ticks:{color:css('--muted'),maxRotation:0,autoSkipPadding:8},grid:{display:false}},y:{stacked:true,ticks:{color:css('--muted'),callback:v=>'$'+v/1000+'k'},grid:{color:css('--line')}}}})});
+  chart('ch-dep',{type:'bar',data:{labels:SEED.deps.map(d=>d.d),datasets:[
+    {label:'Venta',data:SEED.deps.map(d=>d.v),backgroundColor:css('--c2')},{label:'Utilidad',data:SEED.deps.map(d=>d.u),backgroundColor:css('--c1')}]},
+    options:baseOpts({indexAxis:'y',scales:{x:{ticks:{color:css('--muted'),callback:v=>'$'+v/1000+'k'},grid:{color:css('--line')}},y:{ticks:{color:css('--muted')},grid:{display:false}}}})});
+  const mx=Math.max(...SEED.tps.map(t=>t.u));
+  $('#t-top').innerHTML='<thead><tr><th>Tipo de producto</th><th>Piezas</th><th>Venta</th><th>Utilidad</th><th>Margen</th></tr></thead><tbody>'+
+    SEED.tps.map(t=>`<tr><td>${esc(t.t)}<span class="hint"> ${esc(t.d)}</span><span class="bar" style="width:${t.u/mx*100}%"></span></td><td class="num">${t.n.toLocaleString('es-MX')}</td><td class="num">${money0(t.v)}</td><td class="num">${money0(t.u)}</td><td class="num">${pct(t.u/t.v)}</td></tr>`).join('')+'</tbody>';
+  const ti=SEED.invs.reduce((a,x)=>({c:a.c+x.c,v:a.v+x.v,s:a.s+x.s}),{c:0,v:0,s:0});
+  const depV=Object.fromEntries(SEED.deps.map(d=>[d.d,d]));
+  $('#t-inv').innerHTML='<thead><tr><th>Departamento</th><th>Productos</th><th>Valor a costo</th><th>Valor a venta</th><th>% del inventario</th><th>Meses de venta que cubre</th></tr></thead><tbody>'+
+    SEED.invs.map(x=>{const d=depV[x.d],cm=d?(d.v-d.u)/12:0;return `<tr><td>${esc(x.d)}</td><td class="num">${x.s}</td><td class="num">${money0(x.c)}</td><td class="num">${money0(x.v)}</td><td class="num">${pct(x.c/ti.c)}</td><td class="num">${cm?(x.c/cm).toFixed(1):'–'}</td></tr>`}).join('')+
+    `<tr class="tot"><td>Total</td><td class="num">${ti.s}</td><td class="num">${money0(ti.c)}</td><td class="num">${money0(ti.v)}</td><td></td><td></td></tr></tbody>`;
+}
+$('#t-mes').addEventListener('change',e=>{tMes=e.target.value;renderTablero()});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>renderTablero());
+
+/* ---------- registrar ---------- */
+let fTipo='Gasto',editId=null,perTouched=false;
+$('#f-per').addEventListener('input',()=>{perTouched=true});
+$('#f-fecha').addEventListener('change',()=>{if(!perTouched)$('#f-per').value=$('#f-fecha').value.slice(0,7)});
+const VENTAS=['Venta de producto','Venta de recargas','Ingreso agua'],PAGOS=['Efectivo','Transferencia','Tarjeta'];
+function fillCats(){const cs=CATS.filter(c=>c[1]===fTipo&&(editId||!VENTAS.includes(c[0])));const cur=$('#f-cat').value;
+  $('#f-cat').innerHTML=cs.map(c=>`<option>${esc(c[0])}</option>`).join('');
+  if(cs.some(c=>c[0]===cur))$('#f-cat').value=cur; hint()}
+function hint(){const c=cat($('#f-cat').value);if(!c)return;
+  const where=c[2]!=='—'&&c[3]!=='—'?'Cuenta en resultados y en flujo.':c[2]!=='—'?'Solo cuenta en resultados; no mueve la caja.':'Solo mueve la caja; no cambia la utilidad.';
+  $('#f-hint').textContent=c[4]+'. '+where;
+  if(c[3]==='—')$('#f-pago').value='No aplica'; else if($('#f-pago').value==='No aplica')$('#f-pago').value='Efectivo'}
+function setTipo(t){fTipo=t;$$('.seg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===t));fillCats()}
+$('.seg').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setTipo(b.dataset.t)});
+$('#f-cat').addEventListener('change',hint);
+function resetForm(){editId=null;fillCats();$('#f-title').textContent='Otro ingreso o gasto';$('#f-save').textContent='Guardar movimiento';$('#f-cancel').hidden=true;
+  $('#f-monto').value='';$('#f-concepto').value='';$('#f-notas').value='';$('#f-fecha').value=$('#f-fecha').value||today();perTouched=false;$('#f-per').value=$('#f-fecha').value.slice(0,7)}
+$('#f-cancel').addEventListener('click',resetForm);
+$('#f-save').addEventListener('click',async()=>{
+  const m={id:editId||'M-'+Date.now().toString(36),fecha:$('#f-fecha').value,tipo:fTipo,cat:$('#f-cat').value,concepto:$('#f-concepto').value.trim()||$('#f-cat').value,
+    monto:Math.round(parseFloat($('#f-monto').value)*100)/100,pago:$('#f-pago').value,origen:'Captura',notas:$('#f-notas').value.trim()};
+  const fp=$('#f-per').value; if(fp&&fp!==m.fecha.slice(0,7))m.per=fp;
+  if(!m.fecha){toast('Falta la fecha');return} if(!(m.monto>0)){toast('Escribe un monto mayor a cero');$('#f-monto').focus();return}
+  const was=editId; if(!(await push(was?'update':'add',[m])))return;
+  if(was){const i=S.movs.findIndex(x=>x.id===was);if(i>=0)S.movs[i]=m}else S.movs.push(m);
+  resetForm();await syncRec();save();toast(was?'Cambios guardados':'Movimiento guardado');
+});
+/* costo de recargas: se estima solo como % de cada venta capturada */
+const pctRec=()=>{const x=+S.cfg.pctRec;return x>0&&x<=1?x:0.92};
+const pctTar=()=>{const x=+S.cfg.pctTar;return x>=0&&x<1&&S.cfg.pctTar!=null?x:0.04};
+function planRec(movs){ // movimientos que la app calcula sola a partir de las ventas capturadas
+  const rec={},tar={},VT=['Venta de producto','Venta de recargas','Ingreso agua'];
+  movs.forEach(m=>{if(m.origen!=='Captura')return;
+    if(m.cat==='Venta de recargas')rec[m.fecha]=(rec[m.fecha]||0)+m.monto;
+    if(VT.includes(m.cat)&&m.pago==='Tarjeta')tar[m.fecha]=(tar[m.fecha]||0)+m.monto});
+  const pr=pctRec(),pt=pctTar(),lbl=x=>+(x*100).toFixed(1)+'%';
+  const AUTO=[['CR-','Costo de recargas','No aplica',rec,pr,'Estimado: '+lbl(pr)+' de la recarga'],
+    ['SR-','Compra de saldo para recargas','Efectivo',rec,pr,'Estimado: '+lbl(pr)+' de la recarga'],
+    ['CT-','Comisión por tarjeta','Tarjeta',tar,pt,'Estimado: '+lbl(pt)+' de lo cobrado con tarjeta']];
+  const del=[],add=[];
+  for(const [pre,c,pago,by,p,concepto] of AUTO){
+    const want=f=>Math.round((by[f]||0)*p*100)/100;
+    const cur=movs.filter(m=>String(m.id).startsWith(pre)),d=cur.filter(m=>m.id!==pre+m.fecha||Math.abs(want(m.fecha)-m.monto)>0.004);
+    del.push(...d);
+    Object.keys(by).filter(f=>want(f)>0&&!cur.some(m=>m.id===pre+f&&!d.includes(m)))
+      .forEach(f=>add.push({id:pre+f,fecha:f,tipo:'Gasto',cat:c,concepto,monto:want(f),pago,origen:'Captura',notas:'Se calcula solo'}));
+  }
+  return {del,add};
+}
+async function syncRec(){
+  const {del,add}=planRec(S.movs); if(!del.length&&!add.length)return;
+  if(del.length&&!(await push('delete',del)))return; if(add.length&&!(await push('add',add)))return;
+  S.movs=S.movs.filter(m=>!del.includes(m)).concat(add);
+}
+/* venta del día: total contra efectivo + transferencia + tarjeta */
+const r2=x=>Math.round((parseFloat(x)||0)*100)/100;
+const money2=n=>'$'+n.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+function cuadre(){
+  const g=s=>r2($(s).value),tot=g('#v-total'),rub=[g('#v-prod'),g('#v-rec')],pag=[g('#v-ef'),g('#v-tr'),g('#v-ta')],agua=g('#v-agua');
+  const check=(el,parts,nombre)=>{const sum=r2(parts.reduce((a,b)=>a+b,0)),dif=r2(tot-sum),ok=tot>0&&dif===0&&parts.every(x=>x>=0),e=$(el);
+    e.className='cuadre '+(ok?'pos':tot>0||sum>0?'neg':'');
+    e.textContent=!tot&&!sum?'':!tot?'Falta la venta total del día':ok?nombre+' cuadra con el total':dif>0?nombre+': faltan '+money2(dif)+' por repartir':nombre+': sobran '+money2(-dif);
+    return ok};
+  const ok1=check('#v-estado1',rub,'Producto + recargas'),ok2=check('#v-estado2',pag,'Efectivo + transferencia + tarjeta');
+  const vacio=!tot&&!rub.some(Boolean)&&!pag.some(Boolean),ok=(ok1&&ok2)||(vacio&&agua>0);
+  $('#v-save').disabled=!ok; return ok?{tot,rub,pag,agua,vacio}:null;
+}
+['#v-total','#v-prod','#v-rec','#v-ef','#v-tr','#v-ta','#v-agua'].forEach(s=>$(s).addEventListener('input',cuadre));
+$('#v-save').addEventListener('click',async()=>{
+  const d=cuadre(),f=$('#v-fecha').value; if(!d)return; if(!f){toast('Falta la fecha');return}
+  const mk=(c,x,pago,i)=>({id:'V-'+Date.now().toString(36)+i,fecha:f,tipo:'Ingreso',cat:c,concepto:'Venta del día',monto:x,pago,origen:'Captura',notas:''});
+  let news=[],cats=[];
+  if(!d.vacio){ // las recargas se toman primero del efectivo, luego transferencia y tarjeta; el resto es producto
+    let rest=d.rub[1];cats=['Venta de producto','Venta de recargas'];
+    d.pag.forEach((x,i)=>{const r=r2(Math.min(x,rest));rest=r2(rest-r);news.push(mk('Venta de recargas',r,PAGOS[i],'r'+i),mk('Venta de producto',r2(x-r),PAGOS[i],'p'+i))});
+  }
+  if(d.agua>0){cats.push('Ingreso agua');news.push(mk('Ingreso agua',d.agua,$('#v-aguapago').value,'a'))}
+  news=news.filter(m=>m.monto>0);
+  const dup=S.movs.filter(m=>m.fecha===f&&cats.includes(m.cat));
+  if(dup.length&&!confirm('El '+fdate(f)+' ya tiene venta registrada por '+money0(dup.reduce((a,m)=>a+m.monto,0))+' en esos rubros. ¿Reemplazarla?'))return;
+  if(dup.length&&!(await push('delete',dup)))return;
+  if(!(await push('add',news)))return;
+  S.movs=S.movs.filter(m=>!dup.includes(m)).concat(news);
+  ['#v-total','#v-prod','#v-rec','#v-ef','#v-tr','#v-ta','#v-agua'].forEach(s=>$(s).value='');cuadre();await syncRec();save();toast('Venta del '+fdate(f)+' guardada');
+});
+/* cierre mensual: la venta ya está registrada, solo se captura el costo */
+const ventaMes=(k,c,p)=>S.movs.filter(m=>m.fecha.slice(0,7)===k&&m.cat===c&&(!p||m.pago===p)).reduce((a,m)=>a+m.monto,0);
+function pagoTabla(k,cats){
+  const rows=cats.map(c=>[c,...PAGOS.map(p=>ventaMes(k,c,p)),ventaMes(k,c)]).filter(r=>r[4]>0);
+  if(!rows.length)return '<tbody><tr><td class="empty">Sin ventas registradas en '+mlong(k)+'.</td></tr></tbody>';
+  const tot=[0,1,2,3].map(i=>rows.reduce((a,r)=>a+r[i+1],0));
+  return '<thead><tr><th>Venta registrada</th>'+PAGOS.map(p=>`<th>${p}</th>`).join('')+'<th>Total</th></tr></thead><tbody>'+
+    rows.map(r=>`<tr><td>${r[0]}</td>${r.slice(1).map(x=>`<td class="num">${money(x)}</td>`).join('')}</tr>`).join('')+
+    (rows.length>1?`<tr class="tot"><td>Total</td>${tot.map(x=>`<td class="num">${money(x)}</td>`).join('')}</tr>`:'')+'</tbody>';
+}
+function renderCierre(){
+  const k=$('#c-mes').value; if(!k)return;
+  $('#c-ventas').innerHTML=pagoTabla(k,['Venta de producto','Venta de recargas']);
+  const vp=ventaMes(k,'Venta de producto'),vr=ventaMes(k,'Venta de recargas'),cp=r2($('#c-cp').value),cr=(IDX[k]||{})['Costo de recargas']||0,ya=(IDX[k]||{})['Costo de producto vendido'];
+  $('#c-margen').textContent=(cp&&vp?'Margen de producto con este costo: '+pct((vp-cp)/vp)+'. ':'')+(vr?'Costo de recargas ya calculado: '+money0(cr)+' ('+pct(cr/vr)+' de la venta). ':'')+(ya?'Este mes ya tiene costo guardado ('+money0(ya)+' de producto); si guardas se reemplaza.':'');
+}
+['#c-mes','#c-cp'].forEach(s=>$(s).addEventListener('input',renderCierre));
+$('#c-save').addEventListener('click',async()=>{
+  const k=$('#c-mes').value;if(!k){toast('Elige el mes del cierre');return}
+  const vp=ventaMes(k,'Venta de producto'),vr=ventaMes(k,'Venta de recargas');
+  if(!vp){toast('Ese mes no tiene venta de producto registrada');return}
+  const vals=[['Costo de producto vendido','#c-cp',vp]].map(v=>[...v,r2($(v[1]).value)]).filter(v=>v[3]>0);
+  if(!vals.length){toast('Escribe el costo de producto del mes');return}
+  const sin=vals.find(v=>!v[2]); if(sin){toast('No hay venta registrada para ese costo: '+sin[0].toLowerCase());return}
+  const alto=vals.find(v=>v[3]>v[2]); if(alto&&!confirm(alto[0]+' es mayor que la venta registrada del mes. ¿Guardar de todos modos?'))return;
+  const dup=S.movs.filter(m=>m.fecha.slice(0,7)===k&&vals.some(v=>v[0]===m.cat));
+  if(dup.length&&!confirm(mlong(k)+' ya tiene costo guardado. ¿Reemplazarlo?'))return;
+  const [y,mo]=k.split('-').map(Number),f=k===today().slice(0,7)?today():k+'-'+String(new Date(y,mo,0).getDate()).padStart(2,'0');
+  const news=vals.map((v,i)=>({id:'M-'+Date.now().toString(36)+i,fecha:f,tipo:'Gasto',cat:v[0],concepto:'Cierre mensual: costo de lo vendido',monto:v[3],pago:'No aplica',origen:'Captura',notas:''}));
+  if(dup.length&&!(await push('delete',dup)))return;
+  if(!(await push('add',news)))return;
+  S.movs=S.movs.filter(m=>!dup.includes(m)).concat(news);
+  $('#c-cp').value='';save();toast('Costo de '+mlabel(k)+' guardado');
+});
+function rowHtml(m,actions){return `<tr><td class="num">${fdate(m.fecha)}</td><td style="text-align:left"><span class="pill ${m.tipo==='Ingreso'?'i':'g'}">${m.tipo}</span></td>
+  <td style="text-align:left;white-space:normal">${esc(m.cat)}${m.concepto&&m.concepto!==m.cat?`<br><span class="hint">${esc(m.concepto)}${!actions&&m.pago!=='No aplica'?', '+esc(m.pago.toLowerCase()):''}</span>`:''}${m.origen==='Estimado'?' <span class="flag">estimado</span>':''}${perOf(m)!==m.fecha.slice(0,7)?` <span class="flag">corresponde a ${mlabel(perOf(m))}</span>`:''}</td>
+  <td class="num ${m.tipo==='Ingreso'?'pos':''}">${money0(m.monto)}</td>${actions?`<td style="text-align:left">${esc(m.pago)}</td><td><button class="btn ghost small" data-edit="${esc(m.id)}">Editar</button> <button class="btn ghost small danger" data-del="${esc(m.id)}">Borrar</button></td>`:''}</tr>`}
+function renderRegistrar(){
+  const last=[...S.movs].filter(m=>m.origen==='Captura').slice(-12).reverse();
+  $('#r-last').innerHTML=last.length?'<thead><tr><th>Fecha</th><th style="text-align:left">Tipo</th><th style="text-align:left">Categoría</th><th>Monto</th></tr></thead><tbody>'+last.map(m=>rowHtml(m)).join('')+'</tbody>'
+    :'<tbody><tr><td class="empty">Lo que guardes aparecerá aquí. El histórico está en Movimientos.</td></tr></tbody>';
+  const k=($('#v-fecha').value||today()).slice(0,7);$('#p-title').textContent='Ventas de '+mlong(k)+' por forma de pago';$('#p-table').innerHTML=pagoTabla(k,VENTAS);renderCierre();
+}
+
+/* ---------- movimientos ---------- */
+function renderMovs(){
+  const ms=$('#m-mes'),keep=ms.value;ms.innerHTML='<option value="">Todos los meses</option>'+[...MONTHS].reverse().map(k=>`<option value="${k}">${mlabel(k)}</option>`).join('');
+  ms.value=[...ms.options].some(o=>o.value===keep)?keep:'';
+  const mc=$('#m-cat'),kc=mc.value;mc.innerHTML='<option value="">Todas las categorías</option>'+CATS.map(c=>`<option>${esc(c[0])}</option>`).join('');mc.value=kc;
+  const q=$('#m-q').value.toLowerCase(),t=$('#m-tipo').value;
+  const rows=S.movs.filter(m=>(!ms.value||m.fecha.startsWith(ms.value))&&(!t||m.tipo===t)&&(!mc.value||m.cat===mc.value)&&(!q||(m.concepto+' '+m.notas+' '+m.cat).toLowerCase().includes(q)))
+    .sort((a,b)=>b.fecha.localeCompare(a.fecha)||a.cat.localeCompare(b.cat));
+  const ti=rows.filter(m=>m.tipo==='Ingreso').reduce((a,m)=>a+m.monto,0),tg=rows.filter(m=>m.tipo==='Gasto').reduce((a,m)=>a+m.monto,0);
+  $('#m-sub').textContent=`${rows.length} movimientos. Ingresos ${money0(ti)}, gastos ${money0(tg)}.`;
+  const show=rows.slice(0,400);
+  $('#m-table').innerHTML=show.length?'<thead><tr><th>Fecha</th><th style="text-align:left">Tipo</th><th style="text-align:left">Categoría y concepto</th><th>Monto</th><th style="text-align:left">Pago</th><th></th></tr></thead><tbody>'+show.map(m=>rowHtml(m,true)).join('')+
+    (rows.length>400?`<tr><td colspan="6" class="empty">Se muestran 400 de ${rows.length}. Filtra por mes para ver el resto.</td></tr>`:'')+'</tbody>'
+    :'<tbody><tr><td class="empty">Ningún movimiento coincide con el filtro.</td></tr></tbody>';
+}
+['#m-mes','#m-tipo','#m-cat'].forEach(s=>$(s).addEventListener('change',renderMovs));$('#m-q').addEventListener('input',renderMovs);
+$('#m-table').addEventListener('click',async e=>{
+  const d=e.target.dataset;
+  if(d.del){const m=S.movs.find(x=>x.id===d.del);if(!m||!confirm('¿Borrar '+m.cat+' por '+money0(m.monto)+' del '+fdate(m.fecha)+'?'))return;
+    if(!(await push('delete',[m])))return;S.movs=S.movs.filter(x=>x!==m);await syncRec();save();toast('Movimiento borrado')}
+  if(d.edit){const m=S.movs.find(x=>x.id===d.edit);if(!m)return;editId=m.id;setTipo(m.tipo);fillCats();$('#f-cat').value=m.cat;$('#f-fecha').value=m.fecha;$('#f-monto').value=m.monto;
+    $('#f-concepto').value=m.concepto;$('#f-notas').value=m.notas||'';$('#f-per').value=perOf(m);perTouched=true;hint();$('#f-pago').value=m.pago;$('#f-title').textContent='Editar movimiento';$('#f-save').textContent='Guardar cambios';$('#f-cancel').hidden=false;go('registrar')}
+});
+
+/* ---------- reportes ---------- */
+const RANGO={er:'u6',flujo:'u6'};
+function rangeMonths(r){const yrs=[...new Set(MONTHS.map(k=>k.slice(0,4)))];
+  if(r==='u6')return MONTHS.slice(-6); if(r==='u12')return MONTHS.slice(-12); if(r==='todo')return MONTHS; return MONTHS.filter(k=>k.startsWith(r))}
+function fillRangos(){const yrs=[...new Set(MONTHS.map(k=>k.slice(0,4)))].reverse();
+  $$('.rango').forEach(s=>{s.innerHTML=`<option value="u6">Últimos 6 meses</option><option value="u12">Últimos 12 meses</option>${yrs.map(y=>`<option value="${y}">Año ${y}</option>`).join('')}<option value="todo">Todo el histórico</option>`;s.value=RANGO[s.dataset.for]})}
+document.addEventListener('change',e=>{if(e.target.classList.contains('rango')){RANGO[e.target.dataset.for]=e.target.value;renderReports()}});
+const ER_ROWS=()=>[['sec','Ingresos'],...ING.map(c=>['cat',c,o=>o.v(c)]),['tot','Total ingresos',o=>o.tIng],
+  ['sec','Costo de ventas'],...COS.map(c=>['cat',c,o=>o.v(c)]),['tot','Total costo de ventas',o=>o.tCos],
+  ['big','Utilidad bruta',o=>o.ub],['pct','Margen bruto',o=>o.mb],
+  ['sec','Gastos de operación'],...GAS.map(c=>['cat',c,o=>o.v(c)]),['tot','Total gastos de operación',o=>o.tGas],
+  ['big','Utilidad neta',o=>o.un],['pct','Margen neto',o=>o.mn],
+  ['sec','Indicadores'],['pct','Margen de producto',o=>o.mp],['cat','Punto de equilibrio (venta de producto)',o=>o.pe,'nototal'],['cat','Venta de producto contra equilibrio',o=>o.vp?o.vp-o.pe:0,'nototal']];
+const FL_ROWS=()=>[['big','Saldo inicial de caja',o=>o.si,'nototal'],
+  ['sec','Entradas de operación'],...ENT.map(c=>['cat',c,o=>o.v(c)]),['tot','Total entradas',o=>o.ent],
+  ['sec','Salidas de operación'],...SAL.map(c=>['cat',c,o=>o.v(c)]),['tot','Total salidas',o=>o.sal],
+  ['big','Flujo neto de operación',o=>o.fo],
+  ['sec','Inversión'],['cat','Compra de equipo',o=>o.v('Compra de equipo')],
+  ['sec','Financiamiento'],...['Aportación del dueño','Préstamo recibido','Retiro del dueño','Pago de préstamo'].map(c=>['cat',c,o=>o.v(c)]),['tot','Flujo neto de financiamiento',o=>o.fin],
+  ['big','Flujo neto del mes',o=>o.fn],['big','Saldo final de caja',o=>o.sf,'nototal'],
+  ['sec','Conciliación'],['cat','Utilidad neta según resultados',o=>o.un],['cat','Flujo de operación menos utilidad',o=>o.fo-o.un]];
+function sheetData(rows,fn,ms){const objs=ms.map(k=>fn([k])),T=ms.length?fn(ms):null;
+  return rows.map(r=>r[0]==='sec'?{t:'sec',l:r[1]}:{t:r[0],l:r[1],v:objs.map(r[2]),tot:(T&&r[3]!=='nototal')?r[2](T):null})}
+function sheetHtml(rows,fn,ms,flagEst){
+  if(!ms.length)return '<tbody><tr><td class="empty">Aún no hay movimientos para armar el reporte.</td></tr></tbody>';
+  const D=sheetData(rows,fn,ms),f=(t,x)=>t==='pct'?pct(x):money(x);
+  return '<thead><tr><th>Concepto</th>'+ms.map(k=>`<th class="${flagEst&&EST[k]?'est':''}">${mlabel(k)}</th>`).join('')+'<th class="totcol">Periodo</th></tr></thead><tbody>'+
+    D.map(r=>r.t==='sec'?`<tr class="sec"><td colspan="${ms.length+2}">${r.l}</td></tr>`
+      :`<tr class="${r.t}"><td>${r.l}</td>${r.v.map(x=>`<td class="num ${x<-0.5&&r.t!=='cat'?'neg':''}">${f(r.t,x)}</td>`).join('')}<td class="num totcol ${r.tot<-0.5?'neg':''}">${r.tot==null?'':f(r.t,r.tot)}</td></tr>`).join('')+'</tbody>';
+}
+function renderReports(){
+  $('#er-table').innerHTML=sheetHtml(ER_ROWS(),er,rangeMonths(RANGO.er));
+  const ms=rangeMonths(RANGO.flujo);$('#fl-table').innerHTML=sheetHtml(FL_ROWS(),fl,ms,true);
+  $('#fl-cap').innerHTML=(ms.some(k=>EST[k])?'<span class="flag">* compras estimadas</span> En los meses marcados no hay dato real de compras de mercancía ni de saldo de recargas; se supuso que se compró lo mismo que se vendió a costo. Sustituye esos movimientos por el total real en cuanto lo tengas. ':'')+
+    'Se asume que toda la venta se cobra en el mismo mes.';
+}
+
+/* ---------- datos, excel ---------- */
+$('#d-saldo-save').addEventListener('click',()=>{S.cfg.saldo=parseFloat($('#d-saldo').value)||0;S.cfg.saldoMes=$('#d-saldo-mes').value||S.cfg.saldoMes;save();toast('Saldo de arranque guardado')});
+$('#d-pct-save').addEventListener('click',async()=>{const x=parseFloat($('#d-pct').value);if(!(x>0&&x<=100)){toast('Escribe un porcentaje entre 1 y 100');return}
+  S.cfg.pctRec=x/100;await syncRec();save();toast('Porcentaje guardado: '+x+'%')});
+$('#d-ptar-save').addEventListener('click',async()=>{const x=parseFloat($('#d-ptar').value);if(!(x>=0&&x<100)){toast('Escribe un porcentaje entre 0 y 99');return}
+  S.cfg.pctTar=x/100;await syncRec();save();toast('Comisión guardada: '+x+'%')});
+$('#d-reset').addEventListener('click',()=>{if(S.cfg.url){toast('Con Google Sheets conectado, el histórico vive en la hoja');return}
+  if(confirm('Se borrará lo capturado en este dispositivo y quedará solo el histórico de arranque. ¿Continuar?')){S.movs=seedMovs();save();toast('Histórico restablecido')}});
+const HEAD=['ID','Fecha','Tipo','Categoría','Concepto','Monto','Forma de pago','Origen','Notas','Registrado','Mes de resultados'];
+$('#d-export').addEventListener('click',()=>{
+  if(typeof XLSX==='undefined'){toast('Exportar necesita conexión a internet');return}
+  const wb=XLSX.utils.book_new();
+  const mv=[HEAD,...[...S.movs].sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(m=>[m.id,new Date(m.fecha+'T12:00:00'),m.tipo,m.cat,m.concepto,m.monto,m.pago,m.origen,m.notas||'','',new Date(perOf(m)+'-01T12:00:00')])];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(mv,{cellDates:true,dateNF:'dd/mm/yyyy'}),'Movimientos');
+  const rep=(rows,fn)=>[['Concepto',...MONTHS.map(mlabel),'Acumulado'],...sheetData(rows,fn,MONTHS).map(r=>r.t==='sec'?[r.l.toUpperCase()]:[r.l,...r.v.map(x=>x==null?'':Math.round(x*(r.t==='pct'?10000:100))/(r.t==='pct'?10000:100)),r.tot==null?'':Math.round(r.tot*100)/100])];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rep(ER_ROWS(),er)),'Estado de Resultados');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rep(FL_ROWS(),fl)),'Flujo de Efectivo');
+  XLSX.writeFile(wb,'PharmaDelta_'+today()+'.xlsx');toast('Excel exportado');
+});
+$('#d-import').addEventListener('change',async e=>{
+  const file=e.target.files[0];e.target.value='';if(!file)return;
+  if(typeof XLSX==='undefined'){toast('Importar necesita conexión a internet');return}
+  try{
+    const wb=XLSX.read(await file.arrayBuffer(),{cellDates:true}),ws=wb.Sheets['Movimientos'];
+    if(!ws){toast('El archivo no tiene una hoja llamada Movimientos');return}
+    const iso=d=>{if(!(d instanceof Date))return String(d||'').slice(0,10);const x=new Date(d.getTime()+6e4);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')};
+    const rows=XLSX.utils.sheet_to_json(ws,{defval:''}).map((r,i)=>({id:String(r['ID']||'X-'+i),fecha:iso(r['Fecha']),tipo:r['Tipo'],cat:r['Categoría'],concepto:String(r['Concepto']||''),
+      monto:+r['Monto']||0,pago:r['Forma de pago']||'Efectivo',origen:r['Origen']||'Captura',notas:String(r['Notas']||''),per:iso(r['Mes de resultados']).slice(0,7)})).map(m=>{if(!/^\d{4}-\d\d$/.test(m.per)||m.per===m.fecha.slice(0,7))delete m.per;return m}).filter(m=>/^\d{4}-\d\d-\d\d$/.test(m.fecha)&&cat(m.cat)&&m.monto);
+    if(!rows.length){toast('No se encontraron movimientos válidos en la hoja');return}
+    if(S.cfg.url){toast('Con Google Sheets conectado, pega los renglones directo en la hoja');return}
+    if(!confirm('Se reemplazarán los '+S.movs.length+' movimientos de este dispositivo por los '+rows.length+' del archivo. ¿Continuar?'))return;
+    S.movs=rows;save();toast(rows.length+' movimientos importados');
+  }catch(err){toast('No se pudo leer el archivo. Revisa que sea un Excel (.xlsx)')}
+});
+
+/* ---------- Google Sheets (opcional) ---------- */
+async function api(body){
+  const r=await fetch(S.cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({clave:S.cfg.clave,...body})});
+  const j=await r.json(); if(j.status!=='ok')throw new Error(j.message||'Error'); return j;
+}
+async function push(action,movs){
+  if(!S.cfg.url)return true;
+  try{await api({action,movs});return true}catch(e){toast('No se guardó en Google Sheets: '+(e.message==='Failed to fetch'?'sin conexión':e.message));return false}
+}
+async function pull(silent){
+  if(!S.cfg.url)return;
+  try{const j=await api({action:'list'});S.movs=j.data.filter(m=>cat(m.cat));store.set(S);reindex();renderAll();if(!silent)toast('Conectado: '+S.movs.length+' movimientos en la hoja')}
+  catch(e){toast('No se pudo leer Google Sheets: '+(e.message==='Failed to fetch'?'revisa la dirección o tu conexión':e.message))}
+}
+$('#d-conn').addEventListener('click',async()=>{S.cfg.url=$('#d-url').value.trim();S.cfg.clave=$('#d-clave').value;store.set(S);if(!S.cfg.url){toast('Pega la dirección del Apps Script');return}await pull();renderAll()});
+$('#d-disc').addEventListener('click',()=>{S.cfg.url='';S.cfg.clave='';save();toast('Desconectado. Este dispositivo guarda sus propios datos')});
+
+/* ---------- arranque ---------- */
+function renderAll(){
+  $('#mode').innerHTML=S.cfg.url?'<span class="dot ok"></span>Conectado a Google Sheets':'<span class="dot"></span>Guardando solo en este dispositivo';
+  $('#d-saldo').value=S.cfg.saldo||0;$('#d-saldo-mes').value=S.cfg.saldoMes||MONTHS[0]||'';$('#d-pct').value=+(pctRec()*100).toFixed(1);$('#d-ptar').value=+(pctTar()*100).toFixed(1);$('#d-url').value=S.cfg.url||'';$('#d-clave').value=S.cfg.clave||'';
+  fillRangos();renderRegistrar();renderMovs();renderReports();
+  if($('#v-tablero').classList.contains('on'))renderTablero();
+}
+$('#f-fecha').value=today();$('#f-per').value=today().slice(0,7);$('#v-fecha').value=today();$('#v-fecha').addEventListener('change',renderRegistrar);$('#c-mes').value=today().slice(0,7);setTipo('Gasto');$('#f-cat').value='Compra de mercancía';hint();
+reindex();renderAll();pull(true);
+</script>
+</body>
+</html>
